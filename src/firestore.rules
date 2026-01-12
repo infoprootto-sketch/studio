@@ -1,0 +1,238 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // ======================================================================
+    // HELPER FUNCTIONS
+    // ======================================================================
+    
+    function isHotelOwner(hotelId) {
+      // The original owner's UID is the document ID for the hotel.
+      // We also check the ownerUids array for future flexibility.
+      let isOwnerInArray = request.auth != null && get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerUids.hasAny([request.auth.uid]);
+      return request.auth != null && (request.auth.uid == hotelId || isOwnerInArray);
+    }
+    
+    function isHotelAdmin(hotelId) {
+      // An admin is either the original hotel owner...
+      let isOwner = isHotelOwner(hotelId);
+      // ...or a team member with the 'Admin' role.
+      let hasAdminRole = exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid))
+                         && get(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid)).data.role == 'Admin';
+      return isOwner || hasAdminRole;
+    }
+
+    function isTeamMember(hotelId) {
+      return request.auth != null && exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid));
+    }
+    
+    function isFranchiseOwner() {
+        return request.auth != null && request.auth.token.isFranchiseOwner == true;
+    }
+
+    function hasDelegatedAccess(hotelId) {
+        return isFranchiseOwner() && exists(/databases/$(database)/documents/hotels/$(hotelId)/delegates/$(request.auth.uid));
+    }
+
+    function isOwnerOrTeamMember(hotelId) {
+      // This function now correctly includes the original owner.
+      return isHotelOwner(hotelId) || isTeamMember(hotelId);
+    }
+    
+    function isDataOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function isDeletingOwnInvitation() {
+      // Allow a user to delete a document if they are the one named in that document's email field.
+      // This is used for the atomic "claim invitation" process.
+      return request.auth.email == resource.data.email;
+    }
+    
+    function isSuperAdmin() {
+      return request.auth != null && request.auth.token.isSuperAdmin == true;
+    }
+
+    // --- Data Validation Functions ---
+
+    function isValidRoom(data) {
+      return data.number is string && data.type is string && data.status is string;
+    }
+
+    function isValidService(data) {
+      return data.name is string && data.category is string && data.price is number;
+    }
+
+    function isValidRestaurant(data) {
+      return data.name is string;
+    }
+    
+    function isValidTeamMember(data) {
+      return data.name is string && data.email is string && data.department is string && data.role is string;
+    }
+    
+    // ======================================================================
+    // PUBLIC & USER-SPECIFIC ACCESS
+    // ======================================================================
+
+    match /activeStays/{stayId} {
+      // Guests can read their own stay validation doc, but cannot browse all stays.
+      allow get: if true;
+      // Only authenticated hotel staff can create these validation docs.
+      allow create: if isOwnerOrTeamMember(resource.data.hotelId);
+      // Allow any authenticated user (i.e., staff) to delete the record on checkout/cancellation.
+      allow delete: if request.auth != null;
+      allow list, update: if false;
+    }
+
+    // ======================================================================
+    // HOTEL DATA ACCESS
+    // ======================================================================
+    
+    match /hotels/{hotelId} {
+      // Team members, owners, delegated franchise owners, and super admins can read.
+      allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow create: if isDataOwner(hotelId);
+      // Only hotel admins or super admins can update hotel details.
+      allow update: if isHotelAdmin(hotelId) || isSuperAdmin();
+      // Only Super Admins and Franchise Owners can list multiple hotels.
+      allow list: if isSuperAdmin() || isFranchiseOwner();
+    }
+
+    match /hotels/{hotelId}/delegates/{franchiseOwnerUid} {
+        // Only the hotel admin can grant or revoke access.
+        allow read, write: if isHotelAdmin(hotelId);
+    }
+    
+    match /hotels/{hotelId}/accessRequests/{franchiseOwnerUid} {
+        // A franchise owner can only create their own request document
+        allow create: if isFranchiseOwner() && request.auth.uid == franchiseOwnerUid;
+        // The hotel admin can read and delete (approve/deny) requests
+        allow read, delete: if isHotelAdmin(hotelId);
+    }
+
+
+    // ======================================================================
+    // HOTEL SUBCOLLECTIONS
+    // ======================================================================
+    
+    match /hotels/{hotelId}/{document=**} {
+      // Allow read access to all subcollections for team members, owners, and delegated owners.
+      allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+    }
+    
+    // --- Write Rules (more restrictive) ---
+    
+    // --- Rooms & Categories ---
+    match /hotels/{hotelId}/rooms/{roomId} {
+      allow create: if isHotelAdmin(hotelId) && isValidRoom(request.resource.data);
+      allow update: if isOwnerOrTeamMember(hotelId);
+      allow delete: if isHotelAdmin(hotelId);
+      // Allow anyone to query for rooms containing a specific stayId.
+      allow list: if request.query.keys.hasAny(['stays']);
+    }
+    
+    match /hotels/{hotelId}/roomCategories/{catId} {
+        allow write: if isHotelAdmin(hotelId);
+    }
+    
+    // --- Services, Restaurants, Categories, Timings ---
+    match /hotels/{hotelId}/hotelServices/{serviceId} {
+      allow create: if isHotelAdmin(hotelId) && isValidService(request.resource.data);
+      allow update: if isHotelAdmin(hotelId);
+      allow delete: if isHotelAdmin(hotelId);
+    }
+    
+    match /hotels/{hotelId}/restaurants/{restaurantId} {
+        allow create: if isHotelAdmin(hotelId) && isValidRestaurant(request.resource.data);
+        allow update: if isHotelAdmin(hotelId);
+        allow delete: if isHotelAdmin(hotelId);
+    }
+    
+    match /hotels/{hotelId}/serviceCategories/{catId} {
+        allow write: if isHotelAdmin(hotelId);
+    }
+    
+    match /hotels/{hotelId}/serviceTimings/{timingId} {
+        allow write: if isHotelAdmin(hotelId);
+    }
+    
+    // --- Service Requests & History ---
+    match /hotels/{hotelId}/serviceRequests/{reqId} {
+        // Allow anyone to query for requests linked to a specific stayId
+        allow list: if request.query.where[2] == 'stayId';
+        // Guests can create requests, staff can create manual charges
+        allow create: if true;
+        allow update: if isOwnerOrTeamMember(hotelId); // Team members update status
+        allow delete: if isHotelAdmin(hotelId);
+        allow get: if false; // Guests should not be able to get individual requests directly
+    }
+    
+    match /hotels/{hotelId}/checkoutHistory/{histId} {
+      allow create: if isHotelAdmin(hotelId); // Only server/admin should archive stays
+      allow delete: if isHotelAdmin(hotelId);
+    }
+    
+    // --- Team Management ---
+    match /hotels/{hotelId}/teamMembers/{userId} {
+      // Allow authenticated users to read the full list to find their own profile.
+      allow list: if request.auth != null;
+      
+      // A hotel admin can create invitation documents.
+      // A new user can create their own document to finalize registration.
+      allow create: if isHotelAdmin(hotelId) || isDataOwner(userId);
+      
+      // A hotel admin can edit members. A user can update their own document.
+      allow update: if isHotelAdmin(hotelId) || isDataOwner(userId);
+      
+      // A hotel admin can delete members.
+      // A new user can delete their own invitation as part of the registration batch write.
+      allow delete: if isHotelAdmin(hotelId) || isDataOwner(userId) || isDeletingOwnInvitation();
+    }
+    
+    match /hotels/{hotelId}/departments/{deptId} {
+      allow write: if isHotelAdmin(hotelId);
+    }
+    
+     match /hotels/{hotelId}/shifts/{shiftId} {
+      allow write: if isHotelAdmin(hotelId);
+    }
+    
+     match /hotels/{hotelId}/slaRules/{ruleId} {
+      allow write: if isHotelAdmin(hotelId);
+    }
+
+    // --- Corporate & Inventory ---
+    match /hotels/{hotelId}/corporateClients/{clientId} {
+      allow write: if isHotelAdmin(hotelId);
+    }
+
+    match /hotels/{hotelId}/inventory/{itemId} {
+      allow write: if isHotelAdmin(hotelId);
+    }
+
+     match /hotels/{hotelId}/stockMovements/{moveId} {
+      allow create: if isOwnerOrTeamMember(hotelId);
+      allow delete: if isHotelAdmin(hotelId);
+    }
+    
+     match /hotels/{hotelId}/vendors/{vendorId} {
+      allow write: if isHotelAdmin(hotelId);
+    }
+    
+    // --- Configuration ---
+    match /hotels/{hotelId}/config/{docId} {
+        allow write: if isHotelAdmin(hotelId);
+    }
+
+    // --- Marketing / Broadcasts ---
+    match /hotels/{hotelId}/broadcasts/{broadcastId} {
+        // Broadcasts are public-facing announcements for guests.
+        // Allow anyone to read them, but only staff can create/edit them.
+        allow read: if true;
+        allow write: if isOwnerOrTeamMember(hotelId);
+    }
+  }
+}
