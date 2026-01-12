@@ -1,0 +1,51 @@
+type Property @table {
+  name: String!
+  address: String!
+  contactEmail: String!
+  createdAt: Timestamp!
+  phoneNumber: String
+  description: String
+  website: String
+}
+
+type RoomType @table {
+  property: Property!
+  name: String!
+  capacity: Int!
+  basePrice: Float!
+  createdAt: Timestamp!
+  description: String
+  amenities: [String]
+}
+
+type Room @table {
+  property: Property!
+  roomType: RoomType!
+  roomNumber: String!
+  status: String!
+  createdAt: Timestamp!
+}
+
+type Guest @table {
+  firstName: String!
+  lastName: String!
+  email: String!
+  createdAt: Timestamp!
+  phoneNumber: String
+  address: String
+  nationality: String
+}
+
+type Booking @table {
+  property: Property!
+  guest: Guest!
+  room: Room
+  checkInDate: Date!
+  checkOutDate: Date!
+  numberOfGuests: Int!
+  bookingStatus: String!
+  totalAmount: Float!
+  createdAt: Timestamp!
+  specialRequests: String
+  paymentStatus: String
+}

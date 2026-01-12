@@ -23,8 +23,8 @@ export default function TeamLayout({
         <TeamProvider>
           <ServiceProvider>
             <InventoryProvider>
-              <RoomProvider>
-                <BillingProvider>
+              <BillingProvider>
+                <RoomProvider>
                   <div className="flex min-h-screen w-full flex-col bg-muted/40">
                     <AppSidebar />
                     <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-16">
@@ -34,8 +34,8 @@ export default function TeamLayout({
                       </main>
                     </div>
                   </div>
-                </BillingProvider>
-              </RoomProvider>
+                </RoomProvider>
+              </BillingProvider>
             </InventoryProvider>
           </ServiceProvider>
         </TeamProvider>
