@@ -24,5 +24,5 @@
     "types": ["@types/qrcode.react", "@types/papaparse"]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "functions", "functions.sa"]
+  "exclude": ["node_modules", "functions", "functions.sa", "src/functions", "src/functions.sa"]
 }
