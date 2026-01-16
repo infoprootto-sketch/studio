@@ -1,6 +1,5 @@
-
 'use client';
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { SuperAdminSidebar } from '@/components/super-admin/sidebar';
 import { Header } from '@/components/common/header';
 import { HotelIdProvider } from '@/context/hotel-id-context';
@@ -40,7 +39,11 @@ export default function SuperAdminLayout({
   }, [user, isUserLoading, router]);
 
   if (isUserLoading || !user) {
-    return <PageLoader />;
+    return (
+      <Suspense fallback={null}>
+        <PageLoader />
+      </Suspense>
+    );
   }
   
   const SUPER_ADMIN_DUMMY_HOTEL_ID = "SUPER_ADMIN";
