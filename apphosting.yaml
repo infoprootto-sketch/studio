@@ -5,4 +5,4 @@ runConfig:
   # This setting controls the maximum number of server instances that can run for your app.
   # Increasing this value allows your application to automatically scale to handle more traffic.
   # A value of 100 is a good starting point for a production application.
-  maxInstances: 100
+  maxInstances: 20
