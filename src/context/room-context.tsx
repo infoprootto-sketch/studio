@@ -86,9 +86,10 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
 
   const { data: firestoreRooms } = useCollection<Room>(roomsCollectionRef);
 
-  const rooms = useMemo(() => {
+  const [rooms, setRooms] = useState<Room[]>([]);
+
+  const baseRooms = useMemo(() => {
     if (!firestoreRooms) return [];
-    const now = new Date();
     return firestoreRooms.map(room => {
       const stays = (room.stays || []).map(stay => ({
           ...stay,
@@ -101,14 +102,19 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
           to: (block.to as any)?.toDate ? (block.to as any).toDate() : new Date(block.to),
       }));
       
-      const processedRoom = { ...room, stays, outOfOrderBlocks } as Room;
-      
-      return {
-          ...processedRoom,
-          displayStatus: getRoomDisplayStatus(processedRoom, now),
-      };
+      return { ...room, stays, outOfOrderBlocks } as Room;
     });
   }, [firestoreRooms]);
+
+  useEffect(() => {
+    const now = new Date();
+    const roomsWithDisplayStatus = baseRooms.map(room => ({
+        ...room,
+        displayStatus: getRoomDisplayStatus(room, now),
+    }));
+    setRooms(roomsWithDisplayStatus);
+  }, [baseRooms]);
+
 
   const { data: checkoutHistoryData } = useCollection<CheckedOutStay>(checkoutHistoryCollectionRef);
   const { data: roomCategoriesData } = useCollection<RoomCategory>(roomCategoriesCollectionRef);
