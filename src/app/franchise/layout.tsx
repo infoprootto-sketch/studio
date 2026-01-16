@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { FranchiseSidebar } from '@/components/franchise/sidebar';
 import { Header } from '@/components/common/header';
 import { HotelIdProvider } from '@/context/hotel-id-context';
@@ -27,7 +27,11 @@ export default function FranchiseLayout({
   }, [user, isUserLoading, router]);
 
   if (isUserLoading || !user) {
-    return <PageLoader />;
+    return (
+      <Suspense fallback={null}>
+        <PageLoader />
+      </Suspense>
+    );
   }
   
   // A dummy hotelId is used here as this layout is for multi-hotel views.
