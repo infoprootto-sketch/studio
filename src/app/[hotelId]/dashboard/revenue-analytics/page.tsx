@@ -26,6 +26,12 @@ export default function RevenueAnalyticsPage() {
     const { serviceRequests, restaurants } = useServices();
     const { corporateClients } = useBilling();
     const { gstRate, serviceChargeRate, formatPrice } = useSettings();
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
       from: startOfMonth(new Date()),
       to: endOfMonth(new Date()),
@@ -51,10 +57,6 @@ export default function RevenueAnalyticsPage() {
                             padding: 2rem;
                             font-family: sans-serif;
                             background-color: white !important;
-                        }
-                        .print-container {
-                            width: 100%;
-                            color: black;
                         }
                         .no-print {
                             display: none !important;
@@ -241,6 +243,8 @@ export default function RevenueAnalyticsPage() {
       }, [rooms, serviceRequests, gstRate, serviceChargeRate]);
     
        const { todaysDepartures, expectedRevenue } = useMemo(() => {
+        if (!isClient) return { todaysDepartures: [], expectedRevenue: 0 };
+
         const departures = rooms.filter(room => 
           room.status === 'Occupied' && 
           room.stayId && 
@@ -253,7 +257,7 @@ export default function RevenueAnalyticsPage() {
           todaysDepartures: departures,
           expectedRevenue: revenue,
         };
-      }, [rooms, getRoomBalance]);
+      }, [rooms, getRoomBalance, isClient]);
 
 
     return (

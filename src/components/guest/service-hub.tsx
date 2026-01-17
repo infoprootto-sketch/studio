@@ -1,3 +1,4 @@
+
 'use client';
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -141,7 +142,7 @@ export function ServiceHub() {
                                         <Icon className="h-6 w-6" />
                                     </div>
                                     <p className="font-semibold">{service.name}</p>
-                                    {!service.isAvailable && (
+                                    {!service.isAvailable && isClient && (
                                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                             <Clock className="size-3"/>
                                             <span>Unavailable</span>

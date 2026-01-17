@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -281,6 +282,8 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
   }, [rooms, serviceRequests, gstRate, serviceChargeRate]);
 
    const { todaysDepartures, expectedRevenue } = useMemo(() => {
+    if (!isClient) return { todaysDepartures: [], expectedRevenue: 0 };
+
     const departures = rooms.filter(room => 
       room.status === 'Occupied' && 
       room.stayId && 
@@ -293,7 +296,7 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
       todaysDepartures: departures,
       expectedRevenue: revenue,
     };
-  }, [rooms, getRoomBalance]);
+  }, [rooms, getRoomBalance, isClient]);
 
 
   if (occupiedRooms.length === 0 && todaysDepartures.length === 0) {
@@ -309,7 +312,7 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
                 <LogOut className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{todaysDepartures.length}</div>
+                <div className="text-2xl font-bold">{isClient ? todaysDepartures.length : '...'}</div>
                 <p className="text-xs text-muted-foreground">Guests scheduled to check out today</p>
             </CardContent>
         </Card>
@@ -319,7 +322,7 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{formatPrice(expectedRevenue)}</div>
+                <div className="text-2xl font-bold">{isClient ? formatPrice(expectedRevenue) : '...'}</div>
                 <p className="text-xs text-muted-foreground">From today's scheduled departures</p>
             </CardContent>
         </Card>
@@ -394,7 +397,3 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
     </>
   );
 }
-
-    
-
-    

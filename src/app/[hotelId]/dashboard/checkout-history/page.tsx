@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { CheckoutHistoryList } from '@/components/dashboard/checkout-history-list';
 import { useRooms } from '@/context/room-context';
@@ -18,17 +18,24 @@ import { Button } from '@/components/ui/button';
 export default function HistoryPage() {
     const { checkoutHistory } = useRooms();
     const { formatPrice } = useSettings();
+    const [isClient, setIsClient] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
     const checkoutsToday = useMemo(() => {
+        if (!isClient) return 0;
         return checkoutHistory.filter(stay => isToday(stay.checkOutDate)).length;
-    }, [checkoutHistory]);
+    }, [checkoutHistory, isClient]);
 
     const checkoutsThisMonth = useMemo(() => {
+        if (!isClient) return 0;
         return checkoutHistory.filter(stay => isThisMonth(stay.checkOutDate)).length;
-    }, [checkoutHistory]);
+    }, [checkoutHistory, isClient]);
 
     const filteredStays = useMemo(() => {
         let stays = checkoutHistory;
@@ -105,7 +112,7 @@ export default function HistoryPage() {
                         <CheckCircle className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{checkoutsToday}</div>
+                        <div className="text-2xl font-bold">{isClient ? checkoutsToday : '...'}</div>
                         <p className="text-xs text-muted-foreground">Total guests checked out today</p>
                     </CardContent>
                 </Card>
@@ -115,7 +122,7 @@ export default function HistoryPage() {
                         <CalendarDays className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{checkoutsThisMonth}</div>
+                        <div className="text-2xl font-bold">{isClient ? checkoutsThisMonth : '...'}</div>
                         <p className="text-xs text-muted-foreground">Total guests checked out this month</p>
                     </CardContent>
                 </Card>

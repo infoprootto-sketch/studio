@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Utensils, Search, Clock } from "lucide-react";
@@ -26,7 +27,11 @@ export function RestaurantSelection() {
     const { hotelServices, restaurants, serviceTimings } = useServices();
     const { formatPrice } = useSettings();
     const [searchQuery, setSearchQuery] = useState('');
-    const now = new Date();
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     const searchResults = useMemo((): SearchResult[] => {
         if (!searchQuery.trim()) {
@@ -108,7 +113,7 @@ export function RestaurantSelection() {
                         <div className="grid grid-cols-2 gap-4">
                             {restaurants.map((restaurant, index) => {
                                 const timing = serviceTimings.find(t => t.name === restaurant.name);
-                                const isAvailable = isServiceAvailable(restaurant.name, serviceTimings, now);
+                                const isAvailable = isClient ? isServiceAvailable(restaurant.name, serviceTimings, new Date()) : true;
                                 const placeholder = PlaceHolderImages.find(p => p.id === `restaurant-${(index % 3) + 1}`) || PlaceHolderImages[0];
                                 const imageUrl = restaurant.imageUrl || placeholder.imageUrl;
                                 
@@ -128,7 +133,7 @@ export function RestaurantSelection() {
                                                 className="object-cover group-hover:scale-105 transition-transform"
                                                 data-ai-hint={placeholder.imageHint}
                                             />
-                                            {!isAvailable && (
+                                            {!isAvailable && isClient && (
                                                 <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-center text-white p-2">
                                                     <Clock className="size-6 mb-1"/>
                                                     <p className="font-bold text-sm">Currently Closed</p>

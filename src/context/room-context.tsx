@@ -79,6 +79,11 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const { addServiceRequests } = useServices();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const roomsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'rooms') : null), [firestore, hotelId, user]);
   const checkoutHistoryCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'checkoutHistory') : null), [firestore, hotelId, user]);
@@ -107,13 +112,17 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
   }, [firestoreRooms]);
 
   useEffect(() => {
-    const now = new Date();
-    const roomsWithDisplayStatus = baseRooms.map(room => ({
-        ...room,
-        displayStatus: getRoomDisplayStatus(room, now),
-    }));
-    setRooms(roomsWithDisplayStatus);
-  }, [baseRooms]);
+    if (isClient) {
+        const now = new Date();
+        const roomsWithDisplayStatus = baseRooms.map(room => ({
+            ...room,
+            displayStatus: getRoomDisplayStatus(room, now),
+        }));
+        setRooms(roomsWithDisplayStatus);
+    } else {
+        setRooms(baseRooms);
+    }
+  }, [baseRooms, isClient]);
 
 
   const { data: checkoutHistoryData } = useCollection<CheckedOutStay>(checkoutHistoryCollectionRef);
@@ -123,6 +132,8 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
   const roomCategories = useMemo(() => roomCategoriesData || [], [roomCategoriesData]);
 
   const { todaysArrivals, todaysDepartures } = useMemo(() => {
+    if (!isClient) return { todaysArrivals: [], todaysDepartures: [] };
+
     const arrivals: Movement[] = [];
     const departures: Movement[] = [];
 
@@ -137,7 +148,7 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
       });
     });
     return { todaysArrivals: arrivals, todaysDepartures: departures };
-  }, [rooms]);
+  }, [rooms, isClient]);
 
   const [isManageRoomOpen, setIsManageRoomOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
