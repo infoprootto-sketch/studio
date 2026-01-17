@@ -27,11 +27,11 @@ const InventoryContext = createContext<InventoryContextType | undefined>(undefin
 export function InventoryProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const hotelId = useHotelId();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
 
-  const inventoryCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'inventory') : null), [firestore, hotelId, user]);
-  const vendorsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'vendors') : null), [firestore, hotelId, user]);
-  const stockMovementsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'stockMovements') : null), [firestore, hotelId, user]);
+  const inventoryCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'inventory') : null), [firestore, hotelId, user, isUserLoading]);
+  const vendorsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'vendors') : null), [firestore, hotelId, user, isUserLoading]);
+  const stockMovementsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'stockMovements') : null), [firestore, hotelId, user, isUserLoading]);
 
   const { data: inventory = [] } = useCollection<InventoryItem>(inventoryCollectionRef);
   const { data: vendors = [] } = useCollection<Vendor>(vendorsCollectionRef);

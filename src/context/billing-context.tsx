@@ -25,8 +25,8 @@ export function BillingProvider({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
 
   const clientsCollectionRef = useMemoFirebase(
-    () => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'corporateClients') : null),
-    [firestore, hotelId, user]
+    () => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'corporateClients') : null),
+    [firestore, hotelId, user, isUserLoading]
   );
   
   const { data: rawCorporateClients = [] } = useCollection<CorporateClient>(clientsCollectionRef);

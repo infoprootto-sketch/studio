@@ -71,8 +71,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
 
   const settingsDocRef = useMemoFirebase(
-    () => (firestore && hotelId && user ? doc(firestore, 'hotels', hotelId, 'config', 'settings') : null),
-    [firestore, hotelId, user]
+    () => (firestore && hotelId && user && !isUserLoading ? doc(firestore, 'hotels', hotelId, 'config', 'settings') : null),
+    [firestore, hotelId, user, isUserLoading]
   );
 
   const { data: settingsData } = useDoc<HotelSettingsData>(settingsDocRef);

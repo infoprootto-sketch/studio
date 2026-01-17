@@ -50,9 +50,9 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   }, [firestore, hotelId, user, isUserLoading]);
 
 
-  const departmentsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'departments') : null), [firestore, hotelId, user]);
-  const shiftsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'shifts') : null), [firestore, hotelId, user]);
-  const slaRulesCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'slaRules') : null), [firestore, hotelId, user]);
+  const departmentsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'departments') : null), [firestore, hotelId, user, isUserLoading]);
+  const shiftsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'shifts') : null), [firestore, hotelId, user, isUserLoading]);
+  const slaRulesCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'slaRules') : null), [firestore, hotelId, user, isUserLoading]);
 
   const { data: rawTeamMembers = [] } = useCollection<TeamMember>(teamMembersCollectionRef);
   const { data: departments = [] } = useCollection<Department>(departmentsCollectionRef);

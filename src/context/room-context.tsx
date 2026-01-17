@@ -85,9 +85,9 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
     setIsClient(true);
   }, []);
 
-  const roomsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'rooms') : null), [firestore, hotelId, user]);
-  const checkoutHistoryCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'checkoutHistory') : null), [firestore, hotelId, user]);
-  const roomCategoriesCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'roomCategories') : null), [firestore, hotelId, user]);
+  const roomsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'rooms') : null), [firestore, hotelId, user, isUserLoading]);
+  const checkoutHistoryCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'checkoutHistory') : null), [firestore, hotelId, user, isUserLoading]);
+  const roomCategoriesCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'roomCategories') : null), [firestore, hotelId, user, isUserLoading]);
 
   const { data: firestoreRooms } = useCollection<Room>(roomsCollectionRef);
 
