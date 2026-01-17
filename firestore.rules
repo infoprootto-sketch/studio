@@ -81,7 +81,7 @@ service cloud.firestore {
       // Guests can read their own stay validation doc, but cannot browse all stays.
       allow get: if true;
       // Only authenticated hotel staff can create these validation docs.
-      allow create: if request.auth != null;
+      allow create: if isOwnerOrTeamMember(resource.data.hotelId);
       // Allow any authenticated user (i.e., staff) to delete the record on checkout/cancellation.
       allow delete: if request.auth != null;
       allow list, update: if false;
@@ -130,6 +130,7 @@ service cloud.firestore {
       allow create: if isHotelAdmin(hotelId) && isValidRoom(request.resource.data);
       allow update: if isOwnerOrTeamMember(hotelId);
       allow delete: if isHotelAdmin(hotelId);
+      // Allow guests to find their room by stayId
       allow list: if request.query.where[0][0] == 'stayId';
     }
     
@@ -160,7 +161,8 @@ service cloud.firestore {
     
     // --- Service Requests & History ---
     match /hotels/{hotelId}/serviceRequests/{reqId} {
-        allow list: if request.query.where[0][0] == 'stayId';
+        // Allow anyone to query for requests linked to a specific stayId
+        allow list: if request.query.where[2] == 'stayId';
         // Guests can create requests, staff can create manual charges
         allow create: if true;
         allow update: if isOwnerOrTeamMember(hotelId); // Team members update status
@@ -175,9 +177,8 @@ service cloud.firestore {
     
     // --- Team Management ---
     match /hotels/{hotelId}/teamMembers/{userId} {
-      // Super admins can list members of any hotel.
-      // Unauthenticated users can query for their own invitation.
-      allow list: if isSuperAdmin() || true;
+      // Allow authenticated users to read the full list to find their own profile.
+      allow list: if request.auth != null;
       
       // A hotel admin can create invitation documents.
       // A new user can create their own document to finalize registration.

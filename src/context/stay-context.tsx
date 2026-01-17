@@ -74,7 +74,7 @@ export function StayProvider({ children, stayId }: { children: ReactNode; stayId
 
   // Efficiently query for the room that contains the stay
    const roomsQuery = useMemoFirebase(() => (
-    firestore && hotelId && stayId ? query(collection(firestore, 'hotels', hotelId, 'rooms'), where('stays', 'array-contains', stayId)) : null
+    firestore && hotelId && stayId ? query(collection(firestore, 'hotels', hotelId, 'rooms'), where('stayId', '==', stayId)) : null
   ), [firestore, hotelId, stayId]);
 
   const { data: roomData } = useCollection<Room>(roomsQuery);
