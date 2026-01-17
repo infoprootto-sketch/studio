@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
@@ -29,9 +28,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const hotelId = useHotelId();
   const { user, isUserLoading } = useUser();
 
-  const inventoryCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'inventory') : null), [firestore, hotelId, user]);
-  const vendorsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'vendors') : null), [firestore, hotelId, user]);
-  const stockMovementsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'stockMovements') : null), [firestore, hotelId, user]);
+  const inventoryCollectionRef = useMemoFirebase(() => {
+    if (firestore && hotelId && user && !isUserLoading) {
+      return collection(firestore, 'hotels', hotelId, 'inventory');
+    }
+    return null;
+  }, [firestore, hotelId, user, isUserLoading]);
+
+  const vendorsCollectionRef = useMemoFirebase(() => {
+    if (firestore && hotelId && user && !isUserLoading) {
+      return collection(firestore, 'hotels', hotelId, 'vendors');
+    }
+    return null;
+  }, [firestore, hotelId, user, isUserLoading]);
+
+  const stockMovementsCollectionRef = useMemoFirebase(() => {
+    if (firestore && hotelId && user && !isUserLoading) {
+      return collection(firestore, 'hotels', hotelId, 'stockMovements');
+    }
+    return null;
+  }, [firestore, hotelId, user, isUserLoading]);
 
   const { data: inventory = [] } = useCollection<InventoryItem>(inventoryCollectionRef);
   const { data: vendors = [] } = useCollection<Vendor>(vendorsCollectionRef);

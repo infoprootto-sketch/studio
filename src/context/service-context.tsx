@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
@@ -45,7 +44,13 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
 
   const servicesCollectionRef = useMemoFirebase(() => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'hotelServices') : null), [firestore, hotelId]);
   const restaurantsCollectionRef = useMemoFirebase(() => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'restaurants') : null), [firestore, hotelId]);
-  const requestsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'serviceRequests') : null), [firestore, hotelId, user]);
+  const requestsCollectionRef = useMemoFirebase(() => {
+    // This is a protected collection. Only fetch if a staff user is logged in.
+    if (firestore && hotelId && user && !isUserLoading) {
+      return collection(firestore, 'hotels', hotelId, 'serviceRequests');
+    }
+    return null;
+  }, [firestore, hotelId, user, isUserLoading]);
   const timingsCollectionRef = useMemoFirebase(() => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'serviceTimings') : null), [firestore, hotelId]);
   const categoriesCollectionRef = useMemoFirebase(() => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'serviceCategories') : null), [firestore, hotelId]);
   const broadcastsCollectionRef = useMemoFirebase(() => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'broadcasts') : null), [firestore, hotelId]);
