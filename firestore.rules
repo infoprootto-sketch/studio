@@ -130,7 +130,7 @@ service cloud.firestore {
       allow create: if isHotelAdmin(hotelId) && isValidRoom(request.resource.data);
       allow update: if isOwnerOrTeamMember(hotelId);
       allow delete: if isHotelAdmin(hotelId);
-      // Allow guests to find their room by stayId
+      // Allow anyone to query for rooms containing a specific stayId.
       allow list: if request.query.where[0][0] == 'stayId';
     }
     
