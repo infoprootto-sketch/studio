@@ -1,4 +1,3 @@
-
 'use client';
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,7 +11,7 @@ import { useSettings } from "@/context/settings-context";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "../ui/button";
 import { IconMapping } from "@/lib/icon-mapping";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 
 export function ServiceHub() {
@@ -21,9 +20,12 @@ export function ServiceHub() {
     const { wifiSSID, wifiPassword, formatPrice } = useSettings();
     const { toast } = useToast();
     const hotelId = useHotelId();
-    
-    const now = new Date();
+    const [isClient, setIsClient] = useState(false);
 
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+    
     const nights = (stay?.checkInDate && stay?.checkOutDate)
     ? differenceInCalendarDays(new Date(stay.checkOutDate), new Date(stay.checkInDate)) || 1
     : 0;
@@ -39,6 +41,7 @@ export function ServiceHub() {
 
     const availableServices = useMemo(() => {
         const services = [];
+        const now = new Date();
 
         // Add In-Room Dining if restaurants exist
         if (restaurants.length > 0) {
@@ -46,7 +49,7 @@ export function ServiceHub() {
                 name: "In-Room Dining",
                 icon: Utensils,
                 href: `/guest/${hotelId}/${stay?.stayId}/order`,
-                isAvailable: isServiceAvailable('In-Room Dining', serviceTimings, now),
+                isAvailable: isClient ? isServiceAvailable('In-Room Dining', serviceTimings, now) : true,
             });
         }
 
@@ -59,12 +62,12 @@ export function ServiceHub() {
                     name: sc.name,
                     icon: IconMapping[sc.name] || ConciergeBell,
                     href: `/guest/${hotelId}/${stay?.stayId}/service/${categorySlug}`,
-                    isAvailable: isServiceAvailable(sc.name, serviceTimings, now),
+                    isAvailable: isClient ? isServiceAvailable(sc.name, serviceTimings, now) : true,
                 });
             });
 
         return services;
-    }, [restaurants, serviceCategories, serviceTimings, hotelId, stay?.stayId, now]);
+    }, [restaurants, serviceCategories, serviceTimings, hotelId, stay?.stayId, isClient]);
 
     return (
         <div className="space-y-8">

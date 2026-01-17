@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -17,9 +16,14 @@ export function BroadcastBanner() {
   const [visibleBroadcasts, setVisibleBroadcasts] = useState<Broadcast[]>([]);
   const autoplayPlugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: true }));
   const [api, setApi] = React.useState<CarouselApi>()
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    if (!broadcasts || broadcasts.length === 0 || !room) {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient || !broadcasts || broadcasts.length === 0 || !room) {
       setVisibleBroadcasts([]);
       return;
     }
@@ -62,10 +66,9 @@ export function BroadcastBanner() {
 
     setVisibleBroadcasts(activeBroadcasts);
 
-  }, [broadcasts, room, api]);
+  }, [isClient, broadcasts, room, api]);
   
-  // No need for dismiss logic if banners are always rotating
-  if (visibleBroadcasts.length === 0) {
+  if (!isClient || visibleBroadcasts.length === 0) {
     return null;
   }
 
