@@ -43,12 +43,12 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
   const hotelId = useHotelId();
   const { user, isUserLoading } = useUser();
 
-  const servicesCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'hotelServices') : null), [firestore, hotelId, user, isUserLoading]);
-  const restaurantsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'restaurants') : null), [firestore, hotelId, user, isUserLoading]);
-  const requestsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'serviceRequests') : null), [firestore, hotelId, user, isUserLoading]);
-  const timingsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'serviceTimings') : null), [firestore, hotelId, user, isUserLoading]);
-  const categoriesCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'serviceCategories') : null), [firestore, hotelId, user, isUserLoading]);
-  const broadcastsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'broadcasts') : null), [firestore, hotelId, user, isUserLoading]);
+  const servicesCollectionRef = useMemoFirebase(() => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'hotelServices') : null), [firestore, hotelId]);
+  const restaurantsCollectionRef = useMemoFirebase(() => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'restaurants') : null), [firestore, hotelId]);
+  const requestsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'serviceRequests') : null), [firestore, hotelId, user]);
+  const timingsCollectionRef = useMemoFirebase(() => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'serviceTimings') : null), [firestore, hotelId]);
+  const categoriesCollectionRef = useMemoFirebase(() => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'serviceCategories') : null), [firestore, hotelId]);
+  const broadcastsCollectionRef = useMemoFirebase(() => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'broadcasts') : null), [firestore, hotelId]);
 
   const { data: hotelServicesData } = useCollection<HotelService>(servicesCollectionRef);
   const { data: restaurantsData } = useCollection<Restaurant>(restaurantsCollectionRef);
