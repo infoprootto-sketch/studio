@@ -131,7 +131,7 @@ service cloud.firestore {
       allow update: if isOwnerOrTeamMember(hotelId);
       allow delete: if isHotelAdmin(hotelId);
       // Allow anyone to query for rooms containing a specific stayId.
-      allow list: if request.query.keys.hasAny(['stays']);
+      allow list: if request.query.where[0][0] == 'stayId';
     }
     
     match /hotels/{hotelId}/roomCategories/{catId} {
@@ -162,7 +162,7 @@ service cloud.firestore {
     // --- Service Requests & History ---
     match /hotels/{hotelId}/serviceRequests/{reqId} {
         // Allow anyone to query for requests linked to a specific stayId
-        allow list: if request.query.where[2] == 'stayId';
+        allow list: if request.query.where[0][0] == 'stayId';
         // Guests can create requests, staff can create manual charges
         allow create: if true;
         allow update: if isOwnerOrTeamMember(hotelId); // Team members update status
@@ -181,7 +181,7 @@ service cloud.firestore {
       allow list: if request.auth != null;
       
       // A hotel admin can create invitation documents.
-      // A new user can create their own document to finalize registration.
+      // A new user can create their own document to finalize this registration.
       allow create: if isHotelAdmin(hotelId) || isDataOwner(userId);
       
       // A hotel admin can edit members. A user can update their own document.
