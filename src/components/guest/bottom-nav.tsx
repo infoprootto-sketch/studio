@@ -1,4 +1,3 @@
-
 'use client'
 
 import Link from "next/link";
@@ -18,7 +17,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast';
 import { useStay } from "@/context/stay-context";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GuestServiceTimingsDialog } from "./service-timings-dialog";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Label } from "../ui/label";
@@ -35,6 +34,11 @@ export function BottomNav() {
     const [emergencyType, setEmergencyType] = useState<string>('');
     const [otherDetails, setOtherDetails] = useState('');
     const hotelId = params.hotelId as string;
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     const navItems = [
         { href: `/guest/${hotelId}/${stay?.stayId}`, label: 'Home', icon: Home, exact: true },
@@ -99,14 +103,22 @@ export function BottomNav() {
                     <div className="container mx-auto h-20 px-4">
                         <div className="grid grid-cols-7 items-center h-full">
                             {navItems.map((item) => {
-                                if (!item.href || !stay?.stayId) return <div key={item.label} />;
-                                const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+                                const isReady = isClient && !!stay?.stayId;
+                                const href = isReady ? item.href : '#';
+                                const isActive = isReady && (item.exact ? pathname === item.href : pathname.startsWith(item.href));
 
                                 return (
-                                    <Link href={item.href} key={item.label} className={cn(
-                                        "flex flex-col items-center justify-center gap-1 transition-colors",
-                                        isActive ? "text-primary" : "text-muted-foreground hover:text-primary"
-                                    )}>
+                                    <Link 
+                                        href={href} 
+                                        key={item.label} 
+                                        className={cn(
+                                            "flex flex-col items-center justify-center gap-1 transition-colors",
+                                            !isReady && "pointer-events-none opacity-50", // Disable if not ready
+                                            isActive ? "text-primary" : "text-muted-foreground hover:text-primary"
+                                        )}
+                                        aria-disabled={!isReady}
+                                        tabIndex={!isReady ? -1 : undefined}
+                                    >
                                         <item.icon className="h-6 w-6" />
                                         <span className="text-xs font-medium">{item.label}</span>
                                     </Link>
