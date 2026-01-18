@@ -184,9 +184,10 @@
         "description": "A public document for validating an active stay ID.",
         "properties": {
             "hotelId": { "type": "string" },
-            "roomNumber": { "type": "string" }
+            "roomNumber": { "type": "string" },
+            "roomId": { "type": "string" }
         },
-        "required": ["hotelId", "roomNumber"]
+        "required": ["hotelId", "roomNumber", "roomId"]
     },
     "RoomCategory": {
       "$schema": "http://json-schema.org/draft-07/schema#",

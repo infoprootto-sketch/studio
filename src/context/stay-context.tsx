@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useMemo, ReactNode, useState, useEffect } from 'react';
@@ -74,22 +75,31 @@ export function StayProvider({ children, stayId }: { children: ReactNode; stayId
   }, [broadcastsData]);
 
 
-  // Efficiently query for the room that contains the stay
-   const roomsQuery = useMemoFirebase(() => (
-    firestore && hotelId && stayId ? query(collection(firestore, 'hotels', hotelId, 'rooms'), where('stayId', '==', stayId)) : null
-  ), [firestore, hotelId, stayId]);
+  // Step 1: Fetch the activeStay document to get the roomId
+  const activeStayRef = useMemoFirebase(() => (
+    firestore && stayId ? doc(firestore, 'activeStays', stayId) : null
+  ), [firestore, stayId]);
 
-  const { data: roomData } = useCollection<Room>(roomsQuery);
+  const { data: activeStayData } = useDoc<{ roomId: string }>(activeStayRef);
   
+  const roomId = activeStayData?.roomId;
+
+  // Step 2: Use the roomId to fetch the specific room document
+  const roomRef = useMemoFirebase(() => (
+    firestore && hotelId && roomId ? doc(firestore, 'hotels', hotelId, 'rooms', roomId) : null
+  ), [firestore, hotelId, roomId]);
+
+  const { data: roomData } = useDoc<Room>(roomRef);
+  
+  // Step 3: Extract the specific stay from the room document
   const { room, stay } = useMemo(() => {
-    if (!roomData || roomData.length === 0) return { room: undefined, stay: undefined };
-    const foundRoom = roomData[0];
-    const foundStay = foundRoom.stays.find(s => s.stayId === stayId);
+    if (!roomData) return { room: undefined, stay: undefined };
+    const foundStay = roomData.stays.find(s => s.stayId === stayId);
     return { 
         room: {
-            ...foundRoom,
-            checkInDate: (foundRoom.checkInDate as any)?.toDate ? (foundRoom.checkInDate as any).toDate() : new Date(foundRoom.checkInDate!),
-            checkOutDate: (foundRoom.checkOutDate as any)?.toDate ? (foundRoom.checkOutDate as any).toDate() : new Date(foundRoom.checkOutDate!),
+            ...roomData,
+            checkInDate: (roomData.checkInDate as any)?.toDate ? (roomData.checkInDate as any).toDate() : new Date(roomData.checkInDate!),
+            checkOutDate: (roomData.checkOutDate as any)?.toDate ? (roomData.checkOutDate as any).toDate() : new Date(roomData.checkOutDate!),
         }, 
         stay: foundStay ? {
             ...foundStay,

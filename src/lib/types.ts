@@ -276,3 +276,9 @@ export interface Broadcast {
     targetRoomCategories: string[]; // List of RoomCategory names
     displayFrequency: 'always-visible' | 'once-per-session' | 'once-per-hour' | 'once-per-day';
 }
+
+export interface ActiveStay {
+    hotelId: string;
+    roomNumber: string;
+    roomId: string;
+}

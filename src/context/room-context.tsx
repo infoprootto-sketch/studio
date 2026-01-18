@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
@@ -332,7 +333,7 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
 
     // Create the public validation document
     const activeStayRef = doc(firestore, 'activeStays', stay.stayId);
-    setDocumentNonBlocking(activeStayRef, { hotelId, roomNumber: room.number }, { merge: true });
+    setDocumentNonBlocking(activeStayRef, { hotelId, roomNumber: room.number, roomId: room.id }, { merge: true });
 
   },[rooms, updateStay, updateRoom, firestore, hotelId]);
 
