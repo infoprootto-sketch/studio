@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -155,6 +156,6 @@ export default function TeamMemberLoginPage() {
             </Link>
         </CardFooter>
       </Card>
-    </Dialog>
+    </div>
   );
 }
