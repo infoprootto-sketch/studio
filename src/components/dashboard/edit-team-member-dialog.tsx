@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -72,17 +73,20 @@ export function EditTeamMemberDialog({ member, departments, shifts, restaurants,
   }, [department])
 
   const handleSave = () => {
-    if (!name || !email || !department || !role || !shiftId) {
+    const isCreatingAdmin = role === 'Admin';
+    const finalDepartment = isCreatingAdmin ? 'Admin' : department;
+    const finalRestaurantId = finalDepartment === 'F&B' ? restaurantId : undefined;
+
+    if (!name || !email || !finalDepartment || !role || !shiftId) {
       toast({
         variant: "destructive",
         title: "Missing Information",
-        description: "Please fill out all fields for the team member.",
+        description: "Please fill out all required fields for the team member.",
       });
       return;
     }
     
-    // The password is no longer handled here. It's set by the user via email invite.
-    onSave({ id: member?.id, name, email, department, role, shiftId, restaurantId });
+    onSave({ id: member?.id, name, email, department: finalDepartment, role, shiftId, restaurantId: finalRestaurantId });
     onClose();
   };
 
@@ -136,19 +140,6 @@ export function EditTeamMemberDialog({ member, departments, shifts, restaurants,
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-                <Label htmlFor="member-department">Department</Label>
-                <Select value={department} onValueChange={(value) => setDepartment(value as TeamDepartment)}>
-                    <SelectTrigger id="member-department">
-                        <SelectValue placeholder="Select a department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {departments.map((dept) => (
-                            <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-            <div className="space-y-2">
                 <Label htmlFor="member-role">Role</Label>
                 <Select value={role} onValueChange={(value) => setRole(value as TeamRole)}>
                     <SelectTrigger id="member-role">
@@ -161,8 +152,23 @@ export function EditTeamMemberDialog({ member, departments, shifts, restaurants,
                     </SelectContent>
                 </Select>
             </div>
+            {role !== 'Admin' && (
+                <div className="space-y-2">
+                    <Label htmlFor="member-department">Department</Label>
+                    <Select value={department} onValueChange={(value) => setDepartment(value as TeamDepartment)}>
+                        <SelectTrigger id="member-department">
+                            <SelectValue placeholder="Select a department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {departments.map((dept) => (
+                                <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            )}
           </div>
-           {department === 'F&B' && (
+           {department === 'F&B' && role !== 'Admin' && (
               <div className="space-y-2">
                 <Label htmlFor="member-restaurant">Kitchen / Restaurant</Label>
                 <Select value={restaurantId} onValueChange={setRestaurantId}>

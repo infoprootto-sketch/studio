@@ -12,8 +12,9 @@ import { useState } from 'react';
 import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Check, Eye, EyeOff, BarChart3, Users, LayoutDashboard, IndianRupee, Mail, Lock } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { ThemeToggle } from '@/components/theme-toggle';
+import type { TeamMember } from '@/lib/types';
 
 const featureHighlights = [
     {
@@ -61,34 +62,64 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Check if the user is a hotel owner
+      // Check if the user is a hotel owner (primary admin)
       const hotelDocRef = doc(firestore, 'hotels', user.uid);
       const hotelDocSnap = await getDoc(hotelDocRef);
       
-      if (!hotelDocSnap.exists()) {
-        await auth.signOut();
-        throw new Error("This login page is for Hotel Admins only. Please use the Team Member login if you are part of a team.");
+      if (hotelDocSnap.exists()) {
+        const hotelData = hotelDocSnap.data();
+        if (hotelData.status === 'Disabled') {
+          await auth.signOut();
+          throw new Error("This hotel account has been disabled. Please contact support.");
+        }
+        
+        const destination = `/${user.uid}/dashboard`;
+        setLoading(false);
+        setIsSuccess(true);
+        toast({
+          title: "Login Successful",
+          description: "Redirecting to your dashboard...",
+        });
+        setTimeout(() => {
+          router.push(destination);
+        }, 1000);
+        return;
       }
 
-      const hotelData = hotelDocSnap.data();
-      if (hotelData.status === 'Disabled') {
-        await auth.signOut();
-        throw new Error("This hotel account has been disabled. Please contact support.");
+      // If not primary owner, check if they are a co-admin in any hotel
+      const hotelsCollection = collection(firestore, 'hotels');
+      const hotelsSnapshot = await getDocs(hotelsCollection);
+      let adminHotelId: string | null = null;
+      
+      for (const hotelDoc of hotelsSnapshot.docs) {
+        const teamMemberRef = doc(firestore, 'hotels', hotelDoc.id, 'teamMembers', user.uid);
+        const teamMemberSnap = await getDoc(teamMemberRef);
+        if (teamMemberSnap.exists()) {
+          const memberData = teamMemberSnap.data() as TeamMember;
+          if (memberData.role === 'Admin') {
+            adminHotelId = hotelDoc.id;
+            break;
+          }
+        }
       }
-      
-      const destination = `/${user.uid}/dashboard`;
 
-      setLoading(false);
-      setIsSuccess(true);
-      
-      toast({
-        title: "Login Successful",
-        description: "Redirecting to your dashboard...",
-      });
+      if (adminHotelId) {
+        const destination = `/${adminHotelId}/dashboard`;
+        setLoading(false);
+        setIsSuccess(true);
+        toast({
+          title: "Admin Login Successful",
+          description: "Redirecting to your hotel dashboard...",
+        });
+        setTimeout(() => {
+          router.push(destination);
+        }, 1000);
+        return;
+      }
 
-      setTimeout(() => {
-        router.push(destination);
-      }, 1000);
+      // If user is neither, deny login from this page
+      await auth.signOut();
+      throw new Error("This login page is for Hotel Admins only. Please use the Team Member login if you are part of a team.");
 
     } catch (error: any) {
       console.error("Login Error: ", error);
