@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
@@ -15,7 +16,7 @@ import { useHotelId } from './hotel-id-context';
 import { collection, doc, arrayUnion, arrayRemove, serverTimestamp, writeBatch, runTransaction, increment } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getRoomDisplayStatus, isToday } from '@/lib/utils';
-import { useServices } from './service-context';
+import { useServices } from '@/context/service-context';
 
 interface GroupBookingDetails {
     primaryGuestName: string;
@@ -85,9 +86,9 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
     setIsClient(true);
   }, []);
 
-  const roomsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'rooms') : null), [firestore, hotelId, user]);
-  const checkoutHistoryCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'checkoutHistory') : null), [firestore, hotelId, user]);
-  const roomCategoriesCollectionRef = useMemoFirebase(() => (firestore && hotelId && user ? collection(firestore, 'hotels', hotelId, 'roomCategories') : null), [firestore, hotelId, user]);
+  const roomsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'rooms') : null), [firestore, hotelId, user, isUserLoading]);
+  const checkoutHistoryCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'checkoutHistory') : null), [firestore, hotelId, user, isUserLoading]);
+  const roomCategoriesCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'roomCategories') : null), [firestore, hotelId, user, isUserLoading]);
 
   const { data: firestoreRooms } = useCollection<Room>(roomsCollectionRef);
 
@@ -332,7 +333,7 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
 
     // Create the public validation document
     const activeStayRef = doc(firestore, 'activeStays', stay.stayId);
-    setDocumentNonBlocking(activeStayRef, { hotelId, roomNumber: room.number }, { merge: true });
+    setDocumentNonBlocking(activeStayRef, { hotelId, roomNumber: room.number, roomId: room.id }, { merge: true });
 
   },[rooms, updateStay, updateRoom, firestore, hotelId]);
 

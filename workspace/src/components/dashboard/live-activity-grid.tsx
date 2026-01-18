@@ -4,23 +4,23 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Room, ServiceRequest, HotelService, CorporateClient, BilledOrder, Stay, BilledOrderStatus, ServiceRequestStatus, Department } from '@/lib/types';
-import { LiveActivityRoomCard } from './live-activity-room-card';
-import { AddManualChargeDialog } from './add-manual-charge-dialog';
-import { ServiceLogDialog } from './service-log-dialog';
-import { GenerateBillSheet } from './generate-bill-sheet';
+import { LiveActivityRoomCard } from '@/components/dashboard/live-activity-room-card';
+import { AddManualChargeDialog } from '@/components/dashboard/add-manual-charge-dialog';
+import { ServiceLogDialog } from '@/components/dashboard/service-log-dialog';
+import { GenerateBillSheet } from '@/components/dashboard/generate-bill-sheet';
 import { useToast } from '@/hooks/use-toast';
 import { differenceInCalendarDays, differenceInMinutes, isToday } from 'date-fns';
 import { useRooms } from '@/context/room-context';
 import { useSettings } from '@/context/settings-context';
 import { Input } from '@/components/ui/input';
 import { Search, DollarSign, LogOut } from 'lucide-react';
-import { ManageStaySheet } from './manage-stay-sheet';
+import { ManageStaySheet } from '@/components/dashboard/manage-stay-sheet';
 import { useServices } from '@/context/service-context';
 import { useBilling } from '@/context/billing-context';
 import { useTeam } from '@/context/team-context';
 import { useUser } from '@/firebase';
 import { useInventory } from '@/context/inventory-context';
-import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 
 type CartItem = {

@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useStay } from "@/context/stay-context";
 import type { HotelService } from '@/lib/types';
 import { useSettings } from '@/context/settings-context';
-import { Separator } from '../ui/separator';
+import { Separator } from '@/components/ui/separator';
 import { useServices } from '@/context/service-context';
 import { isServiceAvailable } from '@/lib/utils';
 import { useHotelId } from '@/context/hotel-id-context';
