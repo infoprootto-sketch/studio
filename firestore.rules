@@ -44,10 +44,12 @@ service cloud.firestore {
       return request.auth != null && request.auth.token.isSuperAdmin == true;
     }
     
-    function isGuestOfRoom(roomId) {
-      // Allow reading a room if its current stayId is listed in the public activeStays collection.
-      // This is secure because activeStays is only written to by authenticated staff during check-in.
-      return exists(/databases/$(database)/documents/activeStays/$(get(/databases/$(database)/documents/hotels/{hotelId}/rooms/$(roomId)).data.stayId));
+    function isGuestOfRoom() {
+      // For a 'get' request, 'resource' refers to the existing document.
+      // This rule is secure because it checks if the 'stayId' of the room being requested
+      // corresponds to a document in the public 'activeStays' collection.
+      // This confirms the guest has a valid, active stay for this room.
+      return resource.data.stayId != null && exists(/databases/$(database)/documents/activeStays/$(resource.data.stayId));
     }
 
     // ======================================================================
@@ -91,7 +93,7 @@ service cloud.firestore {
 
     // --- GUEST OR STAFF ACCESS ---
     match /hotels/{hotelId}/rooms/{roomId} {
-        allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin() || isGuestOfRoom(roomId);
+        allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin() || isGuestOfRoom();
         allow create: if isHotelAdmin(hotelId);
         allow update: if isOwnerOrTeamMember(hotelId);
         allow delete: if isHotelAdmin(hotelId);
