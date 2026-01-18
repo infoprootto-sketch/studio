@@ -6,6 +6,7 @@ import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebas
 import { useHotelId } from './hotel-id-context';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { usePathname } from 'next/navigation';
 
 
 interface InventoryContextType {
@@ -27,27 +28,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const hotelId = useHotelId();
   const { user, isUserLoading } = useUser();
+  const pathname = usePathname();
+
+  const isGuestPortal = pathname.startsWith('/guest');
+
+  // Only fetch data if we are NOT in the guest portal and the user is logged in
+  const shouldFetchData = useMemo(() => {
+    return !isGuestPortal && !!firestore && !!hotelId && !!user && !isUserLoading;
+  }, [isGuestPortal, firestore, hotelId, user, isUserLoading]);
 
   const inventoryCollectionRef = useMemoFirebase(() => {
-    if (firestore && hotelId && user && !isUserLoading) {
-      return collection(firestore, 'hotels', hotelId, 'inventory');
-    }
-    return null;
-  }, [firestore, hotelId, user, isUserLoading]);
+    return shouldFetchData ? collection(firestore!, 'hotels', hotelId!, 'inventory') : null;
+  }, [shouldFetchData, firestore, hotelId]);
 
   const vendorsCollectionRef = useMemoFirebase(() => {
-    if (firestore && hotelId && user && !isUserLoading) {
-      return collection(firestore, 'hotels', hotelId, 'vendors');
-    }
-    return null;
-  }, [firestore, hotelId, user, isUserLoading]);
+    return shouldFetchData ? collection(firestore!, 'hotels', hotelId!, 'vendors') : null;
+  }, [shouldFetchData, firestore, hotelId]);
 
   const stockMovementsCollectionRef = useMemoFirebase(() => {
-    if (firestore && hotelId && user && !isUserLoading) {
-      return collection(firestore, 'hotels', hotelId, 'stockMovements');
-    }
-    return null;
-  }, [firestore, hotelId, user, isUserLoading]);
+    return shouldFetchData ? collection(firestore!, 'hotels', hotelId!, 'stockMovements') : null;
+  }, [shouldFetchData, firestore, hotelId]);
 
   const { data: inventory = [] } = useCollection<InventoryItem>(inventoryCollectionRef);
   const { data: vendors = [] } = useCollection<Vendor>(vendorsCollectionRef);

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
@@ -7,6 +6,7 @@ import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebas
 import { useHotelId } from './hotel-id-context';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { usePathname } from 'next/navigation';
 
 interface ServiceContextType {
   hotelServices: HotelService[];
@@ -42,19 +42,24 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const hotelId = useHotelId();
   const { user, isUserLoading } = useUser();
+  const pathname = usePathname();
 
+  const isGuestPortal = pathname.startsWith('/guest');
+
+  // Public collections - always fetch
   const servicesCollectionRef = useMemoFirebase(() => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'hotelServices') : null), [firestore, hotelId]);
   const restaurantsCollectionRef = useMemoFirebase(() => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'restaurants') : null), [firestore, hotelId]);
-  const requestsCollectionRef = useMemoFirebase(() => {
-    // This is a protected collection. Only fetch if a staff user is logged in.
-    if (firestore && hotelId && user && !isUserLoading) {
-      return collection(firestore, 'hotels', hotelId, 'serviceRequests');
-    }
-    return null;
-  }, [firestore, hotelId, user, isUserLoading]);
   const timingsCollectionRef = useMemoFirebase(() => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'serviceTimings') : null), [firestore, hotelId]);
   const categoriesCollectionRef = useMemoFirebase(() => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'serviceCategories') : null), [firestore, hotelId]);
   const broadcastsCollectionRef = useMemoFirebase(() => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'broadcasts') : null), [firestore, hotelId]);
+
+  // Protected collection - only fetch for authenticated staff users on non-guest pages
+  const requestsCollectionRef = useMemoFirebase(() => {
+    if (!isGuestPortal && firestore && hotelId && user && !isUserLoading) {
+      return collection(firestore, 'hotels', hotelId, 'serviceRequests');
+    }
+    return null;
+  }, [isGuestPortal, firestore, hotelId, user, isUserLoading]);
 
   const { data: hotelServicesData } = useCollection<HotelService>(servicesCollectionRef);
   const { data: restaurantsData } = useCollection<Restaurant>(restaurantsCollectionRef);
@@ -146,10 +151,12 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
   };
 
   const addServiceRequests = async (requests: Omit<ServiceRequest, 'id'>[]): Promise<string[]> => {
-    if (!requestsCollectionRef) return [];
+    const serviceRequestsCollection = collection(firestore!, `hotels/${hotelId}/serviceRequests`);
+    if (!serviceRequestsCollection) return [];
+    
     const addedIds: string[] = [];
     for (const req of requests) {
-      const docRef = await addDocumentNonBlocking(requestsCollectionRef, req);
+      const docRef = await addDocumentNonBlocking(serviceRequestsCollection, req);
       if (docRef) {
         addedIds.push(docRef.id);
       }
