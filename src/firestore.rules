@@ -101,144 +101,113 @@ service cloud.firestore {
       allow list: if isSuperAdmin() || isFranchiseOwner();
     }
 
+    // ======================================================================
+    // HOTEL SUBCOLLECTIONS - EXPLICIT RULES
+    // ======================================================================
+
+    // --- Access Control ---
     match /hotels/{hotelId}/delegates/{franchiseOwnerUid} {
-        // Only the hotel admin can grant or revoke access.
         allow read, write: if isHotelAdmin(hotelId);
     }
     
     match /hotels/{hotelId}/accessRequests/{franchiseOwnerUid} {
-        // A franchise owner can only create their own request document
         allow create: if isFranchiseOwner() && request.auth.uid == franchiseOwnerUid;
-        // The hotel admin can read and delete (approve/deny) requests
         allow read, delete: if isHotelAdmin(hotelId);
+        allow update, list: if false;
     }
 
-
-    // ======================================================================
-    // HOTEL SUBCOLLECTIONS
-    // ======================================================================
-    
-    match /hotels/{hotelId}/{subcollection}/{docId} {
-      // Default deny-all for writes, reads are handled below or in specific rules.
-      allow write: if false;
-      // Allow general read access to all subcollections for authenticated staff/owners.
-      allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-    }
-    
-    // --- Rooms & Categories ---
-    match /hotels/{hotelId}/rooms/{roomId} {
-      allow create: if isHotelAdmin(hotelId) && isValidRoom(request.resource.data);
-      allow update: if isOwnerOrTeamMember(hotelId);
-      allow delete: if isHotelAdmin(hotelId);
-      // Allow an unauthenticated guest to find their specific room by stayId
-      allow list: if request.query.where.size() == 1 && request.query.where[0][0] == 'stayId' && request.query.where[0][1] == '==';
-    }
-    
+    // --- PUBLICLY READABLE COLLECTIONS (for Guest Portal) ---
     match /hotels/{hotelId}/roomCategories/{catId} {
         allow write: if isHotelAdmin(hotelId);
-        allow read: if true; // Publicly readable for guest portal
+        allow read: if true;
     }
-    
-    // --- Services, Restaurants, Categories, Timings ---
     match /hotels/{hotelId}/hotelServices/{serviceId} {
-      allow create: if isHotelAdmin(hotelId) && isValidService(request.resource.data);
-      allow update: if isHotelAdmin(hotelId);
-      allow delete: if isHotelAdmin(hotelId);
-      allow read: if true; // Publicly readable for guest portal
+        allow create: if isHotelAdmin(hotelId) && isValidService(request.resource.data);
+        allow update: if isHotelAdmin(hotelId);
+        allow delete: if isHotelAdmin(hotelId);
+        allow read: if true;
     }
-    
     match /hotels/{hotelId}/restaurants/{restaurantId} {
         allow create: if isHotelAdmin(hotelId) && isValidRestaurant(request.resource.data);
         allow update: if isHotelAdmin(hotelId);
         allow delete: if isHotelAdmin(hotelId);
-        allow read: if true; // Publicly readable for guest portal
+        allow read: if true;
     }
-    
     match /hotels/{hotelId}/serviceCategories/{catId} {
         allow write: if isHotelAdmin(hotelId);
-        allow read: if true; // Publicly readable for guest portal
+        allow read: if true;
     }
-    
     match /hotels/{hotelId}/serviceTimings/{timingId} {
         allow write: if isHotelAdmin(hotelId);
-        allow read: if true; // Publicly readable for guest portal
+        allow read: if true;
     }
-    
-    // --- Service Requests & History ---
-    match /hotels/{hotelId}/serviceRequests/{reqId} {
-        // Guests can create requests, staff can create manual charges
-        allow create: if true;
-        allow update: if isOwnerOrTeamMember(hotelId); // Team members update status
-        allow delete: if isHotelAdmin(hotelId);
-        // Allow anyone to query for requests linked to a specific stayId
-        allow list: if request.query.where.size() == 1 && request.query.where[0][0] == 'stayId' && request.query.where[0][1] == '==';
-        // Deny direct reads of individual requests by guests for privacy.
-        allow get: if isOwnerOrTeamMember(hotelId);
+    match /hotels/{hotelId}/config/{docId} {
+        allow write: if isHotelAdmin(hotelId);
+        allow read: if true;
     }
-    
-    match /hotels/{hotelId}/checkoutHistory/{histId} {
-      allow create: if isHotelAdmin(hotelId); // Only server/admin should archive stays
+    match /hotels/{hotelId}/broadcasts/{broadcastId} {
+        allow read: if true;
+        allow write: if isOwnerOrTeamMember(hotelId);
+    }
+
+    // --- GUEST-SPECIFIC QUERIES (Publicly listable under specific conditions) ---
+    match /hotels/{hotelId}/rooms/{roomId} {
+      allow create: if isHotelAdmin(hotelId) && isValidRoom(request.resource.data);
+      allow update: if isOwnerOrTeamMember(hotelId);
       allow delete: if isHotelAdmin(hotelId);
-      allow list, update, get: if isOwnerOrTeamMember(hotelId);
+      allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow list: if (isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin()) || (request.query.where.size() == 1 && request.query.where[0].field == 'stayId' && request.query.where[0].operator == '==');
     }
-    
-    // --- Team Management ---
+    match /hotels/{hotelId}/serviceRequests/{reqId} {
+        allow create: if true; // Guests and staff can create
+        allow update: if isOwnerOrTeamMember(hotelId);
+        allow delete: if isHotelAdmin(hotelId);
+        allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+        allow list: if (isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin()) || (request.query.where.size() == 1 && request.query.where[0].field == 'stayId' && request.query.where[0].operator == '==');
+    }
+
+    // --- STAFF-ONLY COLLECTIONS ---
+    match /hotels/{hotelId}/checkoutHistory/{histId} {
+      allow create: if isHotelAdmin(hotelId);
+      allow delete: if isHotelAdmin(hotelId);
+      allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow update: if false;
+    }
     match /hotels/{hotelId}/teamMembers/{userId} {
-      allow read, list: if isOwnerOrTeamMember(hotelId);
+      allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow create: if isHotelAdmin(hotelId) || isDataOwner(userId);
       allow update: if isHotelAdmin(hotelId) || isDataOwner(userId);
       allow delete: if isHotelAdmin(hotelId) || isDataOwner(userId) || isDeletingOwnInvitation();
     }
-    
     match /hotels/{hotelId}/departments/{deptId} {
+      allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow write: if isHotelAdmin(hotelId);
-      allow read: if isOwnerOrTeamMember(hotelId);
     }
-    
-     match /hotels/{hotelId}/shifts/{shiftId} {
+    match /hotels/{hotelId}/shifts/{shiftId} {
+      allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow write: if isHotelAdmin(hotelId);
-      allow read: if isOwnerOrTeamMember(hotelId);
     }
-    
-     match /hotels/{hotelId}/slaRules/{ruleId} {
+    match /hotels/{hotelId}/slaRules/{ruleId} {
+      allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow write: if isHotelAdmin(hotelId);
-      allow read: if isOwnerOrTeamMember(hotelId);
     }
-
-    // --- Corporate & Inventory ---
     match /hotels/{hotelId}/corporateClients/{clientId} {
+      allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow write: if isHotelAdmin(hotelId);
-      allow read: if isOwnerOrTeamMember(hotelId);
     }
-
     match /hotels/{hotelId}/inventory/{itemId} {
+      allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow write: if isHotelAdmin(hotelId);
-      allow read: if isOwnerOrTeamMember(hotelId);
     }
-
-     match /hotels/{hotelId}/stockMovements/{moveId} {
+    match /hotels/{hotelId}/stockMovements/{moveId} {
       allow create: if isOwnerOrTeamMember(hotelId);
       allow delete: if isHotelAdmin(hotelId);
-      allow list, get: if isOwnerOrTeamMember(hotelId);
+      allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow update: if false;
     }
-    
-     match /hotels/{hotelId}/vendors/{vendorId} {
+    match /hotels/{hotelId}/vendors/{vendorId} {
+      allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow write: if isHotelAdmin(hotelId);
-      allow read: if isOwnerOrTeamMember(hotelId);
-    }
-    
-    // --- Configuration ---
-    match /hotels/{hotelId}/config/{docId} {
-        allow write: if isHotelAdmin(hotelId);
-        allow read: if true; // Publicly readable for guest portal
-    }
-
-    // --- Marketing / Broadcasts ---
-    match /hotels/{hotelId}/broadcasts/{broadcastId} {
-        // Broadcasts are public-facing announcements for guests.
-        // Allow anyone to read them, but only staff can create/edit them.
-        allow read: if true;
-        allow write: if isOwnerOrTeamMember(hotelId);
     }
   }
 }
