@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
@@ -23,7 +22,7 @@ interface TeamContextType {
   addSlaRule: (ruleData: Omit<SlaRule, 'id'>) => void;
   updateSlaRule: (ruleId: string, updates: Partial<SlaRule>) => void;
   deleteSlaRule: (ruleId: string) => void;
-  saveTeamMember: (memberData: Partial<TeamMember>) => Promise<boolean>;
+  saveTeamMember: (memberData: Partial<TeamMember>, password?: string) => Promise<boolean>;
   deleteTeamMember: (memberId: string) => Promise<boolean>;
   reassignMembersAndDeleteDepartment: (oldDeptName: string, newDeptName: string) => void;
 }
@@ -40,7 +39,7 @@ const toDate = (value: any): Date | undefined => {
 export function TeamProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const hotelId = useHotelId();
-  const { user, isUserLoading } = useUser();
+  const { user, auth, isUserLoading } = useUser();
 
   const teamMembersCollectionRef = useMemoFirebase(() => {
     if (firestore && hotelId && user && !isUserLoading) {
@@ -72,47 +71,61 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     }));
   }, [rawTeamMembers]);
 
-  const saveTeamMember = async (memberData: Partial<TeamMember>): Promise<boolean> => {
-    if (!firestore || !hotelId || !departmentsCollectionRef) return false;
+  const saveTeamMember = async (memberData: Partial<TeamMember>, password?: string): Promise<boolean> => {
+    if (!firestore || !hotelId) return false;
 
-    try {
+    // Handle new member creation
+    if (!memberData.id && password && memberData.email) {
+      if (!auth) {
+          console.error("Auth service is not available for creating user.");
+          return false;
+      }
+      try {
+        // Create Firebase Auth user first
+        const userCredential = await createUserWithEmailAndPassword(auth, memberData.email, password);
+        const newUserId = userCredential.user.uid;
+
+        // Now run a transaction to create the Firestore document
         await runTransaction(firestore, async (transaction) => {
             const hotelRef = doc(firestore, 'hotels', hotelId);
             const hotelDoc = await transaction.get(hotelRef);
-            if (!hotelDoc.exists()) throw new Error("Hotel not found");
-            const hotelData = hotelDoc.data() as Hotel;
+            if (!hotelDoc.exists()) throw new Error("Hotel not found!");
 
-            if (memberData.id) {
-                // Editing existing member
-                const memberRef = doc(firestore, 'hotels', hotelId, 'teamMembers', memberData.id);
-                transaction.update(memberRef, { ...memberData, restaurantId: memberData.restaurantId || null });
-            } else {
-                // Creating new member profile
-                const newMemberRef = doc(collection(firestore, 'hotels', hotelId, 'teamMembers'));
-                const newMember = {
-                    name: memberData.name!,
-                    email: memberData.email!,
-                    department: memberData.department!,
-                    role: memberData.role!,
-                    shiftId: memberData.shiftId!,
-                    attendanceStatus: 'Clocked Out',
-                    restaurantId: memberData.restaurantId || null,
-                };
-                transaction.set(newMemberRef, newMember);
+            const memberRef = doc(firestore, 'hotels', hotelId, 'teamMembers', newUserId); // Use the new UID
 
-                // Update hotel counts
-                const updates: Partial<Hotel> = { teamSize: increment(1) };
-                if (memberData.role === 'Admin') updates.adminCount = increment(1);
-                if (memberData.role === 'Manager') updates.managerCount = increment(1);
-                if (memberData.role === 'Reception') updates.receptionCount = increment(1);
-                transaction.update(hotelRef, updates);
-            }
+            const newMember = {
+                name: memberData.name!,
+                email: memberData.email!,
+                department: memberData.department!,
+                role: memberData.role!,
+                shiftId: memberData.shiftId!,
+                attendanceStatus: 'Clocked Out' as const,
+                restaurantId: memberData.restaurantId || null,
+            };
+            transaction.set(memberRef, newMember);
+
+            // Update hotel counts
+            const updates: Partial<Hotel> = { teamSize: increment(1) };
+            if (memberData.role === 'Admin') updates.adminCount = increment(1);
+            if (memberData.role === 'Manager') updates.managerCount = increment(1);
+            if (memberData.role === 'Reception') updates.receptionCount = increment(1);
+            transaction.update(hotelRef, updates);
         });
         return true;
-    } catch (e) {
-        console.error("Save member transaction failed:", e);
-        return false;
+      } catch (e: any) {
+         console.error("New member creation failed:", e);
+         // If auth user was created but firestore failed, we have an orphan auth user.
+         // For a real app, you might want to try to delete the auth user here.
+         return false;
+      }
+    } else if (memberData.id) {
+        // This is the existing logic for updating a member
+        const memberRef = doc(firestore, 'hotels', hotelId, 'teamMembers', memberData.id);
+        updateDocumentNonBlocking(memberRef, { ...memberData, restaurantId: memberData.restaurantId || null });
+        return true;
     }
+
+    return false; // Should not happen if logic is correct
   };
   
   const deleteTeamMember = async (memberId: string): Promise<boolean> => {

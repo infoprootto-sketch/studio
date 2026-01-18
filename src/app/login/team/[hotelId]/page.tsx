@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,9 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowRight, Eye, EyeOff, Lock, Mail, Loader2 } from 'lucide-react';
-import { useAuth, useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useAuth, useUser, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, collection, where, query, getDocs, runTransaction } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
 import type { TeamMember } from '@/lib/types';
@@ -63,11 +62,11 @@ export default function TeamMemberLoginPage() {
   useEffect(() => {
     const handleRedirect = async () => {
         if (!isUserLoading && user && firestore) {
-            // 1. Check if the user's doc already exists with their UID (standard case)
-            const teamMemberRefByUid = doc(firestore, `hotels/${hotelId}/teamMembers/${user.uid}`);
-            const teamMemberSnapByUid = await getDoc(teamMemberRefByUid);
+            const teamMemberRef = doc(firestore, `hotels/${hotelId}/teamMembers/${user.uid}`);
+            const teamMemberSnap = await getDoc(teamMemberRef);
 
-            const redirectToDashboard = (memberData: TeamMember) => {
+            if (teamMemberSnap.exists()) {
+                const memberData = teamMemberSnap.data() as TeamMember;
                 toast({
                     title: "Login Successful",
                     description: "Redirecting to your dashboard...",
@@ -82,54 +81,14 @@ export default function TeamMemberLoginPage() {
                 }
                 
                 router.push(destination);
-            };
-
-            if (teamMemberSnapByUid.exists()) {
-                redirectToDashboard(teamMemberSnapByUid.data() as TeamMember);
             } else {
-                // 2. If not found by UID, check for a "pending" doc by email. This handles the first login after registration.
-                const teamMembersCollection = collection(firestore, `hotels/${hotelId}/teamMembers`);
-                const q = query(teamMembersCollection, where("email", "==", user.email));
-                const querySnapshot = await getDocs(q);
-
-                if (!querySnapshot.empty) {
-                    // Found a pending doc. Upgrade it to use the UID.
-                    const pendingDoc = querySnapshot.docs[0];
-                    const pendingData = pendingDoc.data() as Omit<TeamMember, 'id'>;
-
-                    const newMemberRef = doc(firestore, `hotels/${hotelId}/teamMembers/${user.uid}`);
-                    const oldMemberRef = pendingDoc.ref;
-
-                    try {
-                      // Atomically delete the old doc and create the new one
-                      await runTransaction(firestore, async (transaction) => {
-                        transaction.set(newMemberRef, pendingData);
-                        transaction.delete(oldMemberRef);
-                      });
-                      
-                      // Now that the doc is fixed, redirect.
-                      redirectToDashboard(pendingData as TeamMember);
-
-                    } catch (transactionError) {
-                      console.error("Failed to link team member account:", transactionError);
-                      if (auth) await auth.signOut();
-                      toast({
-                          variant: "destructive",
-                          title: "Account Finalization Failed",
-                          description: "Could not set up your account. Please contact an administrator.",
-                      });
-                      setIsLoading(false);
-                    }
-                } else {
-                    // 3. No doc by UID and no pending doc by email. User does not belong to this hotel.
-                     if (auth) await auth.signOut();
-                     toast({
-                        variant: "destructive",
-                        title: "Access Denied",
-                        description: "Your account does not belong to this hotel.",
-                    });
-                    setIsLoading(false);
-                }
+                 if (auth) await auth.signOut();
+                 toast({
+                    variant: "destructive",
+                    title: "Access Denied",
+                    description: "Your account does not belong to this hotel's team.",
+                });
+                setIsLoading(false);
             }
         }
     };
@@ -196,6 +155,6 @@ export default function TeamMemberLoginPage() {
             </Link>
         </CardFooter>
       </Card>
-    </div>
+    </Dialog>
   );
 }

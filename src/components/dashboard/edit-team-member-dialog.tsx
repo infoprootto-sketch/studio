@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -16,9 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { TeamMember, TeamDepartment, TeamRole, Department, Shift, Restaurant } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Lock, Mail, Send } from 'lucide-react';
-import { useAuth } from '@/firebase';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import { Eye, EyeOff, Lock } from 'lucide-react';
 
 interface EditTeamMemberDialogProps {
   member: Partial<TeamMember> | null;
@@ -31,8 +28,6 @@ interface EditTeamMemberDialogProps {
 }
 
 const roles: TeamRole[] = ['Admin', 'Manager', 'Reception', 'Member'];
-const isRegistered = (id?: string) => id && id.length > 20;
-
 
 export function EditTeamMemberDialog({ member, departments, shifts, restaurants, isOpen, onClose, onSave }: EditTeamMemberDialogProps) {
   const [name, setName] = useState('');
@@ -41,8 +36,9 @@ export function EditTeamMemberDialog({ member, departments, shifts, restaurants,
   const [role, setRole] = useState<TeamRole>('Member');
   const [shiftId, setShiftId] = useState<string>('');
   const [restaurantId, setRestaurantId] = useState<string | undefined>(undefined);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
-  const auth = useAuth();
 
   const isEditing = member && member.id;
 
@@ -55,6 +51,7 @@ export function EditTeamMemberDialog({ member, departments, shifts, restaurants,
         setRole(member.role || 'Member');
         setShiftId(member.shiftId || (shifts.length > 0 ? shifts[0].id : ''));
         setRestaurantId(member.restaurantId || undefined);
+        setPassword(''); // Always clear password on open
       } else {
         setName('');
         setEmail('');
@@ -62,19 +59,22 @@ export function EditTeamMemberDialog({ member, departments, shifts, restaurants,
         setRole('Member');
         setShiftId(shifts.length > 0 ? shifts[0].id : '');
         setRestaurantId(undefined);
+        setPassword('');
       }
     }
   }, [member, isOpen, departments, shifts]);
 
   useEffect(() => {
+    if (role === 'Admin') {
+      setDepartment('Admin');
+    }
     if (department !== 'F&B') {
         setRestaurantId(undefined);
     }
-  }, [department])
+  }, [role, department])
 
   const handleSave = () => {
-    const isCreatingAdmin = role === 'Admin';
-    const finalDepartment = isCreatingAdmin ? 'Admin' : department;
+    const finalDepartment = role === 'Admin' ? 'Admin' : department;
     const finalRestaurantId = finalDepartment === 'F&B' ? restaurantId : undefined;
 
     if (!name || !email || !finalDepartment || !role || !shiftId) {
@@ -85,34 +85,18 @@ export function EditTeamMemberDialog({ member, departments, shifts, restaurants,
       });
       return;
     }
-    
-    onSave({ id: member?.id, name, email, department: finalDepartment, role, shiftId, restaurantId: finalRestaurantId });
-    onClose();
-  };
 
-  const handleSendInvite = async () => {
-    if (!email) {
-      toast({ variant: 'destructive', title: 'Email is required to send an invite.'});
-      return;
-    }
-    if (!auth) {
-        toast({ variant: "destructive", title: "Auth service not available." });
-        return;
-    }
-    try {
-        await sendPasswordResetEmail(auth, email);
-        toast({
-            title: "Registration Invite Sent",
-            description: `An email has been sent to ${email} with instructions to set up their account.`,
-        });
-        onClose();
-    } catch (error: any) {
+    if (!isEditing && !password) {
         toast({
             variant: "destructive",
-            title: "Error Sending Invite",
-            description: error.message || "Could not send the invitation email.",
+            title: "Password Required",
+            description: "Please set an initial password for the new team member.",
         });
+        return;
     }
+    
+    onSave({ id: member?.id, name, email, department: finalDepartment, role, shiftId, restaurantId: finalRestaurantId }, password);
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -138,6 +122,19 @@ export function EditTeamMemberDialog({ member, departments, shifts, restaurants,
             </div>
           </div>
           
+           {!isEditing && (
+            <div className="space-y-2">
+              <Label htmlFor="password">Set Initial Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Input id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} className="pl-9" />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground">
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
                 <Label htmlFor="member-role">Role</Label>
@@ -198,13 +195,6 @@ export function EditTeamMemberDialog({ member, departments, shifts, restaurants,
             </div>
         </div>
         <DialogFooter>
-          {isEditing && !isRegistered(member?.id) && (
-             <Button variant="outline" onClick={handleSendInvite}>
-                <Send className="mr-2" />
-                Send Registration Invite
-             </Button>
-          )}
-          <div className="flex-grow"></div>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave}>
             {isEditing ? 'Save Changes' : 'Create Member'}

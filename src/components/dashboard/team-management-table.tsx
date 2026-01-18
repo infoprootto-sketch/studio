@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -7,15 +6,12 @@ import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import type { TeamMember, Department, Shift, Restaurant } from '@/lib/types';
 import { EditTeamMemberDialog } from './edit-team-member-dialog';
-import { PlusCircle, Edit, Trash2, Mail } from 'lucide-react';
+import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
-import { useAuth } from '@/firebase';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { useToast } from '@/hooks/use-toast';
 
 interface TeamManagementTableProps {
   teamMembers: TeamMember[];
@@ -42,8 +38,6 @@ const roleColors = {
     'Member': 'bg-secondary text-secondary-foreground'
 }
 
-const isRegistered = (id: string) => id.length > 20;
-
 export function TeamManagementTable({ teamMembers, departments, shifts, restaurants, onSave, onDelete, role = 'admin' }: TeamManagementTableProps) {
   const [selectedMember, setSelectedMember] = useState<Partial<TeamMember> | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -51,8 +45,6 @@ export function TeamManagementTable({ teamMembers, departments, shifts, restaura
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [roleFilter, setRoleFilter] = useState('All');
   const [shiftFilter, setShiftFilter] = useState('All');
-  const auth = useAuth();
-  const { toast } = useToast();
 
   const handleOpenDialog = (member?: TeamMember) => {
     if (role !== 'admin') return; // Prevent non-admins from opening the dialog
@@ -64,26 +56,6 @@ export function TeamManagementTable({ teamMembers, departments, shifts, restaura
     setIsDialogOpen(false);
     setSelectedMember(null);
   };
-
-  const handleSendInvite = async (email: string) => {
-    if (!auth) {
-        toast({ variant: "destructive", title: "Auth service not available." });
-        return;
-    }
-    try {
-        await sendPasswordResetEmail(auth, email);
-        toast({
-            title: "Registration Invite Sent",
-            description: `An email has been sent to ${email} with instructions to set up their account.`,
-        });
-    } catch (error: any) {
-        toast({
-            variant: "destructive",
-            title: "Error Sending Invite",
-            description: error.message || "Could not send the invitation email.",
-        });
-    }
-  }
 
   const isAnyFilterActive = useMemo(() => {
     return searchQuery !== '' || departmentFilter !== 'All' || roleFilter !== 'All' || shiftFilter !== 'All';
@@ -191,19 +163,10 @@ export function TeamManagementTable({ teamMembers, departments, shifts, restaura
                     <Badge className={cn(roleColors[member.role])}>{member.role}</Badge>
                 </TableCell>
                  <TableCell>
-                    {isRegistered(member.id) ? (
-                        <Badge variant="default" className="bg-green-500">Registered</Badge>
-                    ) : (
-                        <Badge variant="secondary">Pending Invite</Badge>
-                    )}
+                    <Badge variant="default" className="bg-green-500">Registered</Badge>
                 </TableCell>
                 {role === 'admin' && (
                   <TableCell className="text-right">
-                    {!isRegistered(member.id) && (
-                        <Button variant="outline" size="sm" className="mr-2" onClick={() => handleSendInvite(member.email)}>
-                            <Mail className="mr-2 h-4 w-4" /> Invite
-                        </Button>
-                    )}
                     <Button variant="outline" size="sm" className="mr-2" onClick={() => handleOpenDialog(member)}>
                       <Edit className="mr-2 h-4 w-4"/> Edit
                     </Button>
