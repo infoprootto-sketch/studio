@@ -1,16 +1,17 @@
 
 'use client';
 
-import React, { createContext, useContext, useMemo, ReactNode, useState } from 'react';
+import React, { createContext, useContext, useMemo, ReactNode, useState, useEffect } from 'react';
 import type { Room, Stay, ServiceRequest, HotelService, Broadcast } from '@/lib/types';
 import { useSettings } from './settings-context';
 import { differenceInCalendarDays } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useServices } from './service-context';
 import { useInventory } from './inventory-context';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, where, query } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { doc, collection, where, query, getDoc, arrayUnion } from 'firebase/firestore';
 import { useHotelId } from './hotel-id-context';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface StayContextType {
   stay: Stay | undefined;
@@ -47,12 +48,13 @@ type CartItem = {
 export function StayProvider({ children, stayId }: { children: ReactNode; stayId: string }) {
   const firestore = useFirestore();
   const hotelId = useHotelId();
-  const { hotelServices, addServiceRequests: addServiceRequestsToContext } = useServices();
+  const { addServiceRequests: addServiceRequestsToContext } = useServices();
   const { gstRate, serviceChargeRate } = useSettings();
   const { inventory, updateInventoryItem, addStockMovement } = useInventory();
   
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
+  const [serviceLog, setServiceLog] = useState<ServiceRequest[]>([]);
 
   // This query is intentionally broad to work around Firestore's limitations on OR queries.
   // We fetch all active broadcasts and filter them on the client.
@@ -97,21 +99,38 @@ export function StayProvider({ children, stayId }: { children: ReactNode; stayId
     };
   }, [roomData, stayId]);
 
-  // Efficiently query for service requests related to this stay
-  const requestsQuery = useMemoFirebase(() => (
-    firestore && hotelId && stayId ? query(collection(firestore, 'hotels', hotelId, 'serviceRequests'), where('stayId', '==', stayId)) : null
-  ), [firestore, hotelId, stayId]);
+  useEffect(() => {
+    const fetchServiceRequests = async () => {
+      if (!firestore || !hotelId || !stay?.serviceRequestIds || stay.serviceRequestIds.length === 0) {
+        setServiceLog([]);
+        return;
+      }
+      
+      const requests: ServiceRequest[] = [];
+      for (const id of stay.serviceRequestIds) {
+        const reqRef = doc(firestore, 'hotels', hotelId, 'serviceRequests', id);
+        try {
+          const docSnap = await getDoc(reqRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data() as ServiceRequest;
+            requests.push({ 
+              ...data,
+              id: docSnap.id,
+              creationTime: (data.creationTime as any)?.toDate ? (data.creationTime as any).toDate() : new Date(data.creationTime),
+              completionTime: data.completionTime && ((data.completionTime as any)?.toDate ? (data.completionTime as any).toDate() : new Date(data.completionTime)),
+            });
+          }
+        } catch (error) {
+          // This might be a permission error if the rule is not set up for get, but we'll handle it gracefully
+          console.warn(`Could not fetch service request ${id}:`, error);
+        }
+      }
+      setServiceLog(requests);
+    };
 
-  const { data: serviceLogData } = useCollection<ServiceRequest>(requestsQuery);
+    fetchServiceRequests();
+  }, [stay, firestore, hotelId]);
 
-  const serviceLog = useMemo(() => {
-    if (!serviceLogData) return [];
-    return serviceLogData.map(req => ({
-      ...req,
-      creationTime: (req.creationTime as any)?.toDate ? (req.creationTime as any).toDate() : new Date(req.creationTime),
-      completionTime: req.completionTime && (req.completionTime as any)?.toDate ? (req.completionTime as any).toDate() : (req.completionTime ? new Date(req.completionTime) : undefined),
-    }));
-  }, [serviceLogData]);
 
   const billSummary = useMemo(() => {
     if (!stay) return null;
@@ -130,9 +149,28 @@ export function StayProvider({ children, stayId }: { children: ReactNode; stayId
     };
   }, [stay, serviceLog, gstRate, serviceChargeRate]);
 
-  const addServiceRequests = (requests: Omit<ServiceRequest, 'id'>[]) => {
-    addServiceRequestsToContext(requests);
-    requests.forEach(req => {
+  const addServiceRequests = async (requests: Omit<ServiceRequest, 'id'>[]) => {
+    if (!room || !stay || !firestore || !hotelId) return;
+
+    const addedRequestIds = await addServiceRequestsToContext(requests);
+    
+    // Update the stay object with the new service request IDs
+    const roomRef = doc(firestore, 'hotels', hotelId, 'rooms', room.id);
+    const updatedServiceRequestIds = arrayUnion(...addedRequestIds);
+    
+    const newStaysArray = room.stays.map(s => {
+      if (s.stayId === stayId) {
+        return {
+          ...s,
+          serviceRequestIds: [...(s.serviceRequestIds || []), ...addedRequestIds]
+        };
+      }
+      return s;
+    });
+
+    updateDocumentNonBlocking(roomRef, { stays: newStaysArray });
+
+    requests.forEach((req, index) => {
       if (req.serviceId) {
         const service = hotelServices.find(s => s.id === req.serviceId);
         if (service && service.inventoryItemId && service.inventoryQuantityConsumed) {

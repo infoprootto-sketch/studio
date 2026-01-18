@@ -1,4 +1,5 @@
 
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -123,10 +124,7 @@ service cloud.firestore {
       allow create: if isHotelAdmin(hotelId) && isValidRoom(request.resource.data);
       allow update: if isOwnerOrTeamMember(hotelId);
       allow delete: if isHotelAdmin(hotelId);
-      allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-      allow list: if (isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin())
-                   ||
-                   (request.query.filters.size() == 1 && request.query.filters[0][0] == 'stayId' && request.query.filters[0][1] == '==' && exists(/databases/$(database)/documents/activeStays/$(request.query.filters[0][2])));
+      allow get, list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
     }
     
     match /hotels/{hotelId}/roomCategories/{catId} {
@@ -170,10 +168,9 @@ service cloud.firestore {
         allow create: if true;
         allow update: if isOwnerOrTeamMember(hotelId);
         allow delete: if isHotelAdmin(hotelId);
-        allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-        allow list: if (isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin())
-                   ||
-                   (request.query.filters.size() == 1 && request.query.filters[0][0] == 'stayId' && request.query.filters[0][1] == '==' && exists(/databases/$(database)/documents/activeStays/$(request.query.filters[0][2])));
+        // Guests can read their own requests, staff can read all.
+        allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin() || (exists(/databases/$(database)/documents/activeStays/$(resource.data.stayId)));
+        allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
     }
     
     // --- Team Management ---

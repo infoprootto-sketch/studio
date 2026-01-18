@@ -1,4 +1,5 @@
 
+
 import { doc } from "firebase/firestore";
 
 export type RoomStatus = 'Available' | 'Occupied' | 'Cleaning' | 'Out of Order' | 'Waiting for Check-in' | 'Reserved';
@@ -41,6 +42,7 @@ export interface Stay {
   isGroupBooking?: boolean;
   groupMasterStayId?: string;
   isPrimaryInGroup?: boolean;
+  serviceRequestIds?: string[];
 }
 
 export interface Room {

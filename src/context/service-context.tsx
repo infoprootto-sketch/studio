@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
@@ -27,7 +28,7 @@ interface ServiceContextType {
   addRestaurant: (restaurantData: Omit<Restaurant, 'id'>) => void;
   updateRestaurant: (restaurantId: string, updates: Partial<Restaurant>) => void;
   deleteRestaurant: (restaurantId: string) => void;
-  addServiceRequests: (requests: Omit<ServiceRequest, 'id'>[]) => void;
+  addServiceRequests: (requests: Omit<ServiceRequest, 'id'>[]) => Promise<string[]>;
   setServiceTimings: (timings: ServiceTiming[]) => void;
   addServiceTiming: (timing: Omit<ServiceTiming, 'id'>) => void;
   deleteServiceTiming: (timingId: string) => void;
@@ -144,12 +145,17 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
     await batch.commit();
   };
 
-  const addServiceRequests = (requests: Omit<ServiceRequest, 'id'>[]) => {
-    if (!requestsCollectionRef) return;
-    requests.forEach(req => {
-        addDocumentNonBlocking(requestsCollectionRef, req);
-    });
-  }
+  const addServiceRequests = async (requests: Omit<ServiceRequest, 'id'>[]): Promise<string[]> => {
+    if (!requestsCollectionRef) return [];
+    const addedIds: string[] = [];
+    for (const req of requests) {
+      const docRef = await addDocumentNonBlocking(requestsCollectionRef, req);
+      if (docRef) {
+        addedIds.push(docRef.id);
+      }
+    }
+    return addedIds;
+  };
 
   const addHotelService = (serviceData: Omit<HotelService, 'id'>) => {
     if (!servicesCollectionRef) return;
