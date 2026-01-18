@@ -123,10 +123,10 @@ service cloud.firestore {
       allow create: if isHotelAdmin(hotelId) && isValidRoom(request.resource.data);
       allow update: if isOwnerOrTeamMember(hotelId);
       allow delete: if isHotelAdmin(hotelId);
-      // Allow staff to read rooms.
-      allow get, list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-      // Allow an unauthenticated guest to find their specific room by stayId
-      allow list: if request.query.where.size() == 1 && request.query.where[0].field == 'stayId' && request.query.where[0].operator == '==';
+      allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow list: if (isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin())
+                   ||
+                   (request.query.filters.size() == 1 && request.query.filters[0][0] == 'stayId' && request.query.filters[0][1] == '==' && exists(/databases/$(database)/documents/activeStays/$(request.query.filters[0][2])));
     }
     
     match /hotels/{hotelId}/roomCategories/{catId} {
@@ -167,14 +167,13 @@ service cloud.firestore {
     
     // --- Service Requests ---
     match /hotels/{hotelId}/serviceRequests/{reqId} {
-        // Guests can create requests, staff can create manual charges
         allow create: if true;
-        allow update: if isOwnerOrTeamMember(hotelId); // Team members update status
+        allow update: if isOwnerOrTeamMember(hotelId);
         allow delete: if isHotelAdmin(hotelId);
-        // Allow staff to read all requests
-        allow get, list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-        // Allow guest to read their own requests
-        allow list: if request.query.where.size() == 1 && request.query.where[0].field == 'stayId' && request.query.where[0].operator == '==';
+        allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+        allow list: if (isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin())
+                   ||
+                   (request.query.filters.size() == 1 && request.query.filters[0][0] == 'stayId' && request.query.filters[0][1] == '==' && exists(/databases/$(database)/documents/activeStays/$(request.query.filters[0][2])));
     }
     
     // --- Team Management ---
