@@ -105,7 +105,7 @@ export function BookingForm() {
     setBookingType(type);
   }
 
-  const handleCreateBooking = () => {
+  const handleCreateBooking = async () => {
     if (!date?.from || !date?.to || selectedRooms.length === 0) {
       toast({ variant: "destructive", title: "Missing Information", description: "Please fill all fields and select at least one room." });
       return;
@@ -122,7 +122,7 @@ export function BookingForm() {
             return;
         }
 
-        addStay(selectedRooms[0].id, {
+        await addStay(selectedRooms[0].id, {
             guestName: primaryGuestName,
             guestNumber: primaryGuestNumber,
             roomCharge: Number(roomCharge),
@@ -155,7 +155,7 @@ export function BookingForm() {
             roomCharge: Number(groupAssignments[room.id].roomCharge!)
         }));
 
-        addGroupBooking({
+        await addGroupBooking({
             primaryGuestName,
             primaryGuestNumber,
             checkInDate: date.from,

@@ -98,14 +98,14 @@ export function ManageStaySheet({ room: roomProp, rooms, stayId: stayIdProp, isO
   }, [action, room, stay, initialDate, isOpen]);
   
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!room || !stay) return;
 
     if (!guestName || !roomCharge || !date?.from || !date?.to) {
         toast({ variant: "destructive", title: "Missing Information" });
         return;
     }
-    updateStay(room.id, stay.stayId, {
+    await updateStay(room.id, stay.stayId, {
         guestName, guestNumber, roomCharge: Number(roomCharge),
         checkInDate: date.from, checkOutDate: date.to
     });

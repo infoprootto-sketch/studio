@@ -132,43 +132,17 @@ export function RoomManagementTable({ roomsProp, isSuperAdminView = false }: Roo
     }
   };
 
-  const handleDeleteRoom = (roomId: string) => {
-    const roomToDelete = rooms.find(r => r.id === roomId);
-    if (roomToDelete?.status === 'Occupied') {
-        toast({
-            title: "Action Prohibited",
-            description: `Room ${roomToDelete.number} is occupied and cannot be deleted.`,
-            variant: "destructive",
-        });
-        return;
-    }
-    roomActions.deleteRoom(roomId);
-    toast({
-        title: "Room Deleted",
-        description: "The room has been successfully removed.",
-    });
+  const handleDeleteRoom = async (roomId: string) => {
+    await roomActions.deleteRoom(roomId);
   };
 
   const handleBulkDelete = () => {
-    const roomsToDelete = selectedRoomIds.map(id => rooms.find(r => r.id === id)).filter(Boolean) as Room[];
-    const occupiedRooms = roomsToDelete.filter(r => r.status === 'Occupied');
-    const deletableRooms = roomsToDelete.filter(r => r.status !== 'Occupied');
-
-    if (occupiedRooms.length > 0) {
-        toast({
-            title: "Some Rooms Skipped",
-            description: `${occupiedRooms.length} room(s) are occupied and were not deleted.`,
-            variant: "default",
-        });
-    }
-
-    if (deletableRooms.length > 0) {
-        deletableRooms.forEach(room => roomActions.deleteRoom(room.id));
-        toast({
-            title: `${deletableRooms.length} Rooms Deleted`,
-            description: "The selected rooms have been successfully removed.",
-        });
-    }
+    const deletableRooms = selectedRoomIds.map(id => rooms.find(r => r.id === id)).filter(Boolean) as Room[];
+    
+    deletableRooms.forEach(room => {
+        // The deleteRoom function now handles the check for occupied rooms
+        roomActions.deleteRoom(room.id);
+    });
     
     setSelectedRoomIds([]);
   };
