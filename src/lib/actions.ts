@@ -1,57 +1,10 @@
 'use server';
 
 import { z } from 'zod';
-import { generateHotelFiles } from '@/ai/flows/generate-hotel-files';
 import { getLocalRecommendations } from '@/ai/flows/ai-powered-local-exploration';
 import { extractMenuItems } from '@/ai/flows/extract-menu-items-flow';
-import type { GenerateHotelFilesOutput } from '@/ai/flows/generate-hotel-files';
 import type { LocalRecommendationsOutput } from '@/ai/flows/ai-powered-local-exploration';
 import type { ExtractMenuItemsOutput } from '@/ai/flows/extract-menu-items-flow';
-
-// State for Hotel File Generation
-export interface HotelConfigState {
-  formState: 'initial' | 'loading' | 'success' | 'error';
-  message: string;
-  data: GenerateHotelFilesOutput | null;
-}
-
-const hotelConfigSchema = z.object({
-  hotelId: z.string().min(3, 'Hotel ID must be at least 3 characters'),
-  preferences: z.string().min(10, 'Preferences must be at least 10 characters'),
-});
-
-export async function handleGenerateHotelFiles(
-  prevState: HotelConfigState,
-  formData: FormData
-): Promise<HotelConfigState> {
-  const validatedFields = hotelConfigSchema.safeParse({
-    hotelId: formData.get('hotelId'),
-    preferences: formData.get('preferences'),
-  });
-
-  if (!validatedFields.success) {
-    return {
-      formState: 'error',
-      message: validatedFields.error.flatten().fieldErrors.preferences?.[0] || 'Invalid input.',
-      data: null,
-    };
-  }
-
-  try {
-    const result = await generateHotelFiles(validatedFields.data);
-    return {
-      formState: 'success',
-      message: 'Successfully generated configuration files.',
-      data: result,
-    };
-  } catch (error) {
-    return {
-      formState: 'error',
-      message: error instanceof Error ? error.message : 'An unknown error occurred.',
-      data: null,
-    };
-  }
-}
 
 // State for Local Recommendations
 export interface LocalExplorerState {

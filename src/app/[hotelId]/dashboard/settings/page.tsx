@@ -1,7 +1,5 @@
-
 'use client';
 
-import { AiConfigGenerator } from '@/components/dashboard/ai-config-generator';
 import { BillingSettings } from '@/components/dashboard/billing-settings';
 import { DelegatedAccess } from '@/components/dashboard/delegated-access';
 import { HotelSettings } from '@/components/dashboard/hotel-settings';
@@ -16,10 +14,9 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="hotel-settings">
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
           <TabsTrigger value="hotel-settings">Hotel Settings</TabsTrigger>
           <TabsTrigger value="billing-config">Billing Config</TabsTrigger>
-          <TabsTrigger value="ai-config">AI Configuration</TabsTrigger>
           <TabsTrigger value="delegation">Delegation</TabsTrigger>
         </TabsList>
         <TabsContent value="hotel-settings">
@@ -27,9 +24,6 @@ export default function SettingsPage() {
         </TabsContent>
         <TabsContent value="billing-config">
             <BillingSettings />
-        </TabsContent>
-        <TabsContent value="ai-config">
-            <AiConfigGenerator />
         </TabsContent>
         <TabsContent value="delegation">
             <DelegatedAccess />
