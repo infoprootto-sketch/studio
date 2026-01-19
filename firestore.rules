@@ -21,7 +21,7 @@ service cloud.firestore {
     }
 
     function isTeamMember(hotelId) {
-      return request.auth != null && get(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid)).data.role != null;
+      return request.auth != null && exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid));
     }
     
     function isFranchiseOwner() {
