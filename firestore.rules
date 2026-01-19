@@ -113,7 +113,7 @@ service cloud.firestore {
     // --- STAFF-ONLY COLLECTIONS ---
     match /hotels/{hotelId}/checkoutHistory/{docId} { allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin(); allow create, delete: if isHotelAdmin(hotelId); allow update: if false; }
     match /hotels/{hotelId}/teamMembers/{userId} {
-        allow read: if isDataOwner(userId) || isHotelAdmin(hotelId);
+        allow read: if true;
         allow create: if isHotelAdmin(hotelId);
         allow update: if isHotelAdmin(hotelId) || isDataOwner(userId);
         allow delete: if isHotelAdmin(hotelId) || isDataOwner(userId);
@@ -121,7 +121,10 @@ service cloud.firestore {
     match /hotels/{hotelId}/departments/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
     match /hotels/{hotelId}/shifts/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
     match /hotels/{hotelId}/slaRules/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
-    match /hotels/{hotelId}/corporateClients/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isOwnerOrTeamMember(hotelId); }
+    match /hotels/{hotelId}/corporateClients/{docId} { 
+      allow read: if isOwnerOrTeamMember(hotelId); 
+      allow write: if isHotelAdmin(hotelId); 
+    }
     match /hotels/{hotelId}/inventory/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
     match /hotels/{hotelId}/stockMovements/{docId} { allow create: if isOwnerOrTeamMember(hotelId); allow delete: if isHotelAdmin(hotelId); allow read: if isOwnerOrTeamMember(hotelId); allow update: if false; }
     match /hotels/{hotelId}/vendors/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
