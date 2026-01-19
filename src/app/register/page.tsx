@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState } from 'react';
@@ -128,6 +129,7 @@ export default function RegisterPage() {
         contactNumber: finalData.hotelContact,
         location: finalData.hotelLocation,
         adminName: finalData.adminName,
+        ownerUids: [user.uid],
       };
 
       const hotelSettings: HotelSettings = {

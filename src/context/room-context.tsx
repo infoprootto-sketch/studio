@@ -339,20 +339,48 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
     const stay = room?.stays.find(s => s.stayId === stayId);
     if (!room || !stay) return;
     
-    updateStay(roomId, stayId, { status: 'Checked In' });
+    runTransaction(firestore, async (transaction) => {
+      const roomRef = doc(firestore, 'hotels', hotelId, 'rooms', roomId);
+      const activeStayRef = doc(firestore, 'activeStays', stay.stayId);
 
-    updateRoom(roomId, {
-        guestName: stay.guestName,
-        stayId: stay.stayId,
-        checkInDate: stay.checkInDate,
-        checkOutDate: stay.checkOutDate,
+      const roomDoc = await transaction.get(roomRef);
+      if (!roomDoc.exists()) {
+        throw "Room does not exist!";
+      }
+
+      const currentRoomData = roomDoc.data() as Room;
+      const stayToUpdate = currentRoomData.stays.find(s => s.stayId === stayId);
+      if (!stayToUpdate) {
+        throw "Stay not found in room!";
+      }
+
+      const updatedStay = { ...stayToUpdate, status: 'Checked In' as const };
+      const otherStays = currentRoomData.stays.filter(s => s.stayId !== stayId);
+
+      transaction.update(roomRef, {
+        stays: [...otherStays, updatedStay],
+        guestName: updatedStay.guestName,
+        stayId: updatedStay.stayId,
+        checkInDate: updatedStay.checkInDate,
+        checkOutDate: updatedStay.checkOutDate,
         status: 'Occupied'
+      });
+      
+      transaction.set(activeStayRef, { hotelId, roomNumber: room.number, roomId: room.id }, { merge: true });
+    }).then(() => {
+        toast({
+            title: "Guest Checked In",
+            description: `${stay.guestName} has been checked into Room ${room.number}.`
+        });
+    }).catch((error) => {
+        console.error("Check-in transaction failed: ", error);
+        toast({
+            variant: "destructive",
+            title: "Check-in Failed",
+            description: "Could not check in the guest. Please try again.",
+        });
     });
-
-    const activeStayRef = doc(firestore, 'activeStays', stay.stayId);
-    setDocumentNonBlocking(activeStayRef, { hotelId, roomNumber: room.number, roomId: room.id }, { merge: true });
-
-  },[rooms, updateStay, updateRoom, firestore, hotelId]);
+  },[firestore, hotelId, rooms, toast]);
 
   const archiveStay = useCallback(async (room: Room, stay: Stay, finalBill: FinalBill) => {
     if (!firestore || !hotelId) return;
@@ -470,7 +498,7 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
             description: "A problem occurred during checkout, possibly due to conflicting operations. Please try again.",
         });
     }
-  }, [firestore, hotelId, toast]);
+  }, [firestore, hotelId, toast, addServiceRequests]);
 
   const addCategory = useCallback((categoryData: Omit<RoomCategory, 'id'>) => {
     if (!roomCategoriesCollectionRef) return;
