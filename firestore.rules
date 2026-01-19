@@ -21,7 +21,7 @@ service cloud.firestore {
     }
 
     function isTeamMember(hotelId) {
-      return request.auth != null && exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid));
+      return request.auth != null && get(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid)).data.role != null;
     }
     
     function isFranchiseOwner() {
@@ -101,7 +101,7 @@ service cloud.firestore {
         allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
     }
     match /hotels/{hotelId}/serviceRequests/{reqId} {
-        allow create: if true;
+        allow create: if (request.auth == null && request.resource.data.stayId != null && exists(/databases/$(database)/documents/activeStays/$(request.resource.data.stayId))) || isTeamMember(hotelId);
         allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin() || exists(/databases/$(database)/documents/activeStays/$(resource.data.stayId));
         allow update: if isOwnerOrTeamMember(hotelId);
         allow delete: if isHotelAdmin(hotelId);
