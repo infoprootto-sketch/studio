@@ -36,7 +36,7 @@ export async function getLocalRecommendations(
 
 const prompt = ai.definePrompt({
   name: 'localRecommendationsPrompt',
-  model: 'gemini-1.5-flash-latest',
+  model: 'gemini-3-flash-preview',
   input: {schema: LocalRecommendationsInputSchema},
   output: {schema: LocalRecommendationsOutputSchema},
   prompt: `You are a local expert providing personalized recommendations to hotel guests.
