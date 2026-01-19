@@ -101,20 +101,17 @@ service cloud.firestore {
         allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
     }
     match /hotels/{hotelId}/serviceRequests/{reqId} {
-        allow create: if (isTeamMember(hotelId)) || (request.auth == null && request.resource.data.stayId != null && exists(/databases/$(database)/documents/activeStays/$(request.resource.data.stayId)));
+        allow create: if isTeamMember(hotelId) || (request.auth == null && request.resource.data.stayId != null && exists(/databases/$(database)/documents/activeStays/$(request.resource.data.stayId)));
         allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin() || exists(/databases/$(database)/documents/activeStays/$(resource.data.stayId));
         allow update: if isOwnerOrTeamMember(hotelId);
         allow delete: if isHotelAdmin(hotelId);
-        // Allow staff to list all requests.
-        // Allow unauthenticated guests to list, but only if they limit their query to prevent scraping.
-        // The client query MUST use `where('stayId', '==', ...)` to be functionally secure.
-        allow list: if (isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin()) || (request.auth == null && request.query.limit <= 50);
+        allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
     }
 
     // --- STAFF-ONLY COLLECTIONS ---
     match /hotels/{hotelId}/checkoutHistory/{docId} { allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin(); allow create, delete: if isHotelAdmin(hotelId); allow update: if false; }
     match /hotels/{hotelId}/teamMembers/{userId} {
-        allow get: if isDataOwner(userId) || isHotelAdmin(hotelId);
+        allow get: if isDataOwner(userId);
         allow list: if isOwnerOrTeamMember(hotelId);
         allow create: if isHotelAdmin(hotelId);
         allow update: if isHotelAdmin(hotelId) || isDataOwner(userId);
