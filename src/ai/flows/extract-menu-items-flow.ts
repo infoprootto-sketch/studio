@@ -56,6 +56,7 @@ export async function extractMenuItems(
 
 const prompt = ai.definePrompt({
   name: 'extractMenuItemsPrompt',
+  model: 'gemini-pro-vision',
   input: {schema: ExtractMenuItemsInputSchema},
   output: {schema: ExtractMenuItemsOutputSchema},
   prompt: `You are an expert data entry specialist for restaurants. Your task is to analyze an image of a menu and extract all the food and beverage items.
