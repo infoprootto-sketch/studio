@@ -45,7 +45,7 @@ export default function TeamPage({ role = 'admin' }: { role?: 'admin' | 'manager
     };
     
     const handleSaveMember = async (memberData: Partial<TeamMember>, password?: string) => {
-        const success = await saveTeamMember(memberData);
+        const success = await saveTeamMember(memberData, password);
         if (success) {
             toast({
                 title: memberData.id ? "Team Member Updated" : "Team Member Created",
