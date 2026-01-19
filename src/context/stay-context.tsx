@@ -49,7 +49,7 @@ type CartItem = {
 export function StayProvider({ children, stayId }: { children: ReactNode; stayId: string }) {
   const firestore = useFirestore();
   const hotelId = useHotelId();
-  const { addServiceRequests: addServiceRequestsToContext } = useServices();
+  const { addServiceRequests: addServiceRequestsToContext, hotelServices } = useServices();
   const { gstRate, serviceChargeRate } = useSettings();
   const { inventory, updateInventoryItem, addStockMovement } = useInventory();
   
