@@ -3,7 +3,6 @@
 
 import { AiConfigGenerator } from '@/components/dashboard/ai-config-generator';
 import { BillingSettings } from '@/components/dashboard/billing-settings';
-import { ChannelManager } from '@/components/dashboard/channel-manager';
 import { DelegatedAccess } from '@/components/dashboard/delegated-access';
 import { HotelSettings } from '@/components/dashboard/hotel-settings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,10 +16,9 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="hotel-settings">
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4">
           <TabsTrigger value="hotel-settings">Hotel Settings</TabsTrigger>
           <TabsTrigger value="billing-config">Billing Config</TabsTrigger>
-          <TabsTrigger value="channel-manager">Channel Manager</TabsTrigger>
           <TabsTrigger value="ai-config">AI Configuration</TabsTrigger>
           <TabsTrigger value="delegation">Delegation</TabsTrigger>
         </TabsList>
@@ -29,9 +27,6 @@ export default function SettingsPage() {
         </TabsContent>
         <TabsContent value="billing-config">
             <BillingSettings />
-        </TabsContent>
-        <TabsContent value="channel-manager">
-            <ChannelManager />
         </TabsContent>
         <TabsContent value="ai-config">
             <AiConfigGenerator />

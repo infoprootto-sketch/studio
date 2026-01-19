@@ -106,9 +106,3 @@ A mobile-first web app for guests, now significantly more lightweight and perfor
 -   **Service Hub**: Access to all services. Availability is determined in real-time based on configured service timings.
 -   **SOS Button**: A prominent emergency button that triggers the global staff alert system.
 -   **Requests Log (`/requests`):** A new page where guests can view the status and history of all their service requests.
-
-### C. Interactive Demo Mode (`/demo/...`)
-
-A new, sandboxed environment for users to explore the application without needing to register or connect to a live database.
--   **Mock Data Providers**: The `/demo` route uses a separate set of context providers (`DemoRoomProvider`, etc.) that are initialized with a complete set of mock data.
--   **Tutorial System**: The `TutorialProvider` guides new users through a step-by-step process of setting up a virtual hotel, teaching them the core functionalities of the dashboard.
