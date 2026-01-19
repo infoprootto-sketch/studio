@@ -12,7 +12,7 @@ import type {
 } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { useHotelId } from './hotel-id-context';
+import { useHotelId } from '@/context/hotel-id-context';
 import { collection, doc, arrayUnion, arrayRemove, serverTimestamp, writeBatch, runTransaction, increment } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getRoomDisplayStatus, isToday } from '@/lib/utils';
@@ -243,14 +243,14 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
       ...stayData,
       guestNumber: stayData.guestNumber || null,
       status: 'Booked',
-      stayId: `${room.number}-${shortId}`,
+      stayId: `${'${'}room.number}-${'${'}shortId}`,
     };
     updateDocumentNonBlocking(roomRef, { stays: arrayUnion(newStay) });
   },[firestore, hotelId, rooms]);
 
   const addGroupBooking = useCallback((groupDetails: GroupBookingDetails, assignments: RoomAssignment[]) => {
     if (!firestore || !hotelId) return;
-    const masterStayId = `GROUP-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    const masterStayId = `GROUP-${'${'}Math.random().toString(36).substring(2, 10).toUpperCase()}`;
 
     assignments.forEach(assignment => {
         const room = rooms.find(r => r.id === assignment.roomId);
@@ -267,7 +267,7 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
             status: 'Booked',
             isGroupBooking: true,
             isPrimaryInGroup: (groupDetails.isClubbed && groupDetails.primaryRoomId === room.id) || false,
-            stayId: `${room.number}-${shortId}`,
+            stayId: `${'${'}room.number}-${'${'}shortId}`,
             ...(groupDetails.isClubbed && { groupMasterStayId: masterStayId })
         };
 
@@ -346,7 +346,7 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
             amount: finalBill.roomCharges?.amount ?? 0,
         },
         serviceCharges: (finalBill.serviceCharges || []).map(sc => ({
-            id: sc.id || `sc-${Date.now()}`,
+            id: sc.id || `sc-${'${'}Date.now()}`,
             stayId: sc.stayId || stay.stayId,
             roomNumber: sc.roomNumber || room.number,
             service: sc.service || 'Unknown Service',
@@ -452,7 +452,7 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
       toast({
         variant: "destructive",
         title: "Category in Use",
-        description: `Cannot delete "${categoryToDelete.name}". ${roomsInUse.length} room(s) are still assigned to this category. Please re-assign them first.`,
+        description: `Cannot delete "${'${'}categoryToDelete.name}". ${'${'}roomsInUse.length} room(s) are still assigned to this category. Please re-assign them first.`,
       });
       return;
     }
@@ -462,7 +462,7 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
     
     toast({
         title: "Category Deleted",
-        description: `The category "${categoryToDelete?.name}" has been removed.`,
+        description: `The category "${'${'}categoryToDelete?.name}" has been removed.`,
         variant: "destructive"
     });
   }, [firestore, hotelId, rooms, roomCategories, toast]);
