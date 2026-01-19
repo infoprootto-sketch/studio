@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useMemo, ReactNode, useState, useEffect } from 'react';
@@ -49,7 +48,7 @@ type CartItem = {
 export function StayProvider({ children, stayId }: { children: ReactNode; stayId: string }) {
   const firestore = useFirestore();
   const hotelId = useHotelId();
-  const { addServiceRequests: addServiceRequestsToContext } = useServices();
+  const { hotelServices, addServiceRequests: addServiceRequestsToContext } = useServices();
   const { gstRate, serviceChargeRate } = useSettings();
   const { inventory, updateInventoryItem, addStockMovement } = useInventory();
   
@@ -205,3 +204,4 @@ export function useStay() {
   }
   return context;
 }
+    
