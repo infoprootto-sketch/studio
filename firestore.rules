@@ -59,10 +59,11 @@ service cloud.firestore {
     match /activeStays/{stayId} {
       // Anyone can read a specific activeStay document to start the guest portal flow.
       allow get: if true;
-      // Only staff can create/delete these.
+      // Only staff can create/update/delete these.
       allow create: if isOwnerOrTeamMember(resource.data.hotelId);
+      allow update: if isOwnerOrTeamMember(request.resource.data.hotelId);
       allow delete: if isOwnerOrTeamMember(get(/databases/$(database)/documents/activeStays/$(stayId)).data.hotelId);
-      allow list, update: if false;
+      allow list: if false;
     }
 
     // ======================================================================
@@ -119,3 +120,5 @@ service cloud.firestore {
     match /hotels/{hotelId}/vendors/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
   }
 }
+
+    
