@@ -101,7 +101,7 @@ service cloud.firestore {
         allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
     }
     match /hotels/{hotelId}/serviceRequests/{reqId} {
-        allow create: if (request.auth == null && request.resource.data.stayId != null && exists(/databases/$(database)/documents/activeStays/$(request.resource.data.stayId))) || isTeamMember(hotelId);
+        allow create: if (isTeamMember(hotelId)) || (request.auth == null && request.resource.data.stayId != null && exists(/databases/$(database)/documents/activeStays/$(request.resource.data.stayId)));
         allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin() || exists(/databases/$(database)/documents/activeStays/$(resource.data.stayId));
         allow update: if isOwnerOrTeamMember(hotelId);
         allow delete: if isHotelAdmin(hotelId);
@@ -123,7 +123,7 @@ service cloud.firestore {
     match /hotels/{hotelId}/departments/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
     match /hotels/{hotelId}/shifts/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
     match /hotels/{hotelId}/slaRules/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
-    match /hotels/{hotelId}/corporateClients/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
+    match /hotels/{hotelId}/corporateClients/{docId} { allow read, write: if isOwnerOrTeamMember(hotelId); }
     match /hotels/{hotelId}/inventory/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
     match /hotels/{hotelId}/stockMovements/{docId} { allow create: if isOwnerOrTeamMember(hotelId); allow delete: if isHotelAdmin(hotelId); allow read: if isOwnerOrTeamMember(hotelId); allow update: if false; }
     match /hotels/{hotelId}/vendors/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
