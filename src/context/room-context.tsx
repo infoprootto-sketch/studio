@@ -61,9 +61,9 @@ interface RoomActionsContextType {
   addStay: (roomId: string, stayData: Omit<Stay, 'stayId' | 'status'>) => void;
   addGroupBooking: (groupDetails: GroupBookingDetails, assignments: RoomAssignment[]) => void;
   updateStay: (roomId: string, stayId: string, updates: Partial<Stay>) => void;
-  removeStay: (roomId: string, stayId: string) => void;
+  removeStay: (roomId: string, stayId: string) => Promise<void>;
   checkInStay: (roomId: string, stayId: string) => void;
-  archiveStay: (room: Room, stay: Stay, finalBill: FinalBill) => void;
+  archiveStay: (room: Room, stay: Stay, finalBill: FinalBill) => Promise<void>;
   addCategory: (categoryData: Omit<RoomCategory, 'id'>) => void;
   updateCategory: (categoryId: string, updates: Partial<RoomCategory>) => void;
   deleteCategory: (categoryId: string) => void;
@@ -292,27 +292,45 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
     updateDocumentNonBlocking(roomRef, { stays: [...otherStays, updatedStay] });
   },[firestore, hotelId, rooms]);
   
-  const removeStay = useCallback((roomId: string, stayId: string) => {
+  const removeStay = useCallback(async (roomId: string, stayId: string) => {
     if (!firestore || !hotelId) return;
-    const room = rooms.find(r => r.id === roomId);
-    if (!room) return;
-
-    const stayToRemove = room.stays.find(s => s.stayId === stayId);
-    if (!stayToRemove) return;
-
     const roomRef = doc(firestore, 'hotels', hotelId, 'rooms', roomId);
-    updateDocumentNonBlocking(roomRef, {
-        stays: arrayRemove(stayToRemove),
-        guestName: null,
-        stayId: null,
-        checkIn: null,
-        checkInDate: null,
-    });
+    const activeStayRef = doc(firestore, 'activeStays', stayId);
     
-    const activeStayRef = doc(firestore, 'activeStays', stayToRemove.stayId);
-    deleteDocumentNonBlocking(activeStayRef);
+    try {
+        await runTransaction(firestore, async (transaction) => {
+            const roomDoc = await transaction.get(roomRef);
+            if (!roomDoc.exists()) {
+                throw new Error("Room does not exist!");
+            }
+            const currentRoomData = roomDoc.data() as Room;
 
-  }, [firestore, hotelId, rooms]);
+            const stayToRemove = (currentRoomData.stays || []).find(s => s.stayId === stayId);
+            if (!stayToRemove) {
+                console.warn(`Stay ${stayId} to remove not found in room ${roomId}. It might have been removed already.`);
+                return;
+            }
+            
+            const newStaysArray = (currentRoomData.stays || []).filter(s => s.stayId !== stayId);
+
+            transaction.update(roomRef, {
+                stays: newStaysArray,
+                guestName: null,
+                stayId: null,
+                checkInDate: null,
+            });
+            
+            transaction.delete(activeStayRef);
+        });
+    } catch (e) {
+        console.error("Remove stay transaction failed:", e);
+        toast({
+            variant: "destructive",
+            title: "Cancellation Failed",
+            description: "Could not remove the booking. Please try again.",
+        });
+    }
+  }, [firestore, hotelId, toast]);
 
 
   const checkInStay = useCallback((roomId: string, stayId: string) => {
@@ -331,86 +349,128 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
         status: 'Occupied'
     });
 
-    // Create the public validation document
     const activeStayRef = doc(firestore, 'activeStays', stay.stayId);
     setDocumentNonBlocking(activeStayRef, { hotelId, roomNumber: room.number, roomId: room.id }, { merge: true });
 
   },[rooms, updateStay, updateRoom, firestore, hotelId]);
 
-  const archiveStay = useCallback((room: Room, stay: Stay, finalBill: FinalBill) => {
-    if (!checkoutHistoryCollectionRef || !firestore || !hotelId) return;
+  const archiveStay = useCallback(async (room: Room, stay: Stay, finalBill: FinalBill) => {
+    if (!firestore || !hotelId) return;
 
-    const sanitizedBill: FinalBill = {
-        roomCharges: {
-            label: finalBill.roomCharges?.label || 'Room Charge',
-            amount: finalBill.roomCharges?.amount ?? 0,
-        },
-        serviceCharges: (finalBill.serviceCharges || []).map(sc => ({
-            id: sc.id || `sc-${Date.now()}`,
-            stayId: sc.stayId || stay.stayId,
-            roomNumber: sc.roomNumber || room.number,
-            service: sc.service || 'Unknown Service',
-            status: sc.status || 'Completed',
-            time: sc.time || 'N/A',
-            creationTime: sc.creationTime || new Date(),
-            completionTime: sc.completionTime || null, // Use null for optional dates
-            staff: sc.staff || 'N/A',
-            assignedTo: sc.assignedTo || null,
-            createdBy: sc.createdBy || null,
-            isManualCharge: sc.isManualCharge || false,
-            price: sc.price ?? 0,
-            category: sc.category || 'Other',
-            serviceId: sc.serviceId || null,
-            quantity: sc.quantity || 1,
-        })),
-        subtotal: finalBill.subtotal ?? 0,
-        serviceChargeAmount: finalBill.serviceChargeAmount ?? 0,
-        gstAmount: finalBill.gstAmount ?? 0,
-        paidAmount: finalBill.paidAmount ?? 0,
-        discount: finalBill.discount ?? 0,
-        total: finalBill.total ?? 0,
-        paymentMethod: finalBill.paymentMethod || 'Unknown',
-    };
+    const roomRef = doc(firestore, 'hotels', hotelId, 'rooms', room.id);
+    const historyCollectionRef = collection(firestore, 'hotels', hotelId, 'checkoutHistory');
+    const serviceRequestCollectionRef = collection(firestore, 'hotels', hotelId, 'serviceRequests');
+    const activeStayRef = doc(firestore, 'activeStays', stay.stayId);
 
-    const checkedOutStay: Omit<CheckedOutStay, 'id'> = {
-      stayId: stay.stayId,
-      roomNumber: room.number,
-      roomType: room.type,
-      guestName: stay.guestName,
-      checkInDate: stay.checkInDate,
-      checkOutDate: new Date(),
-      finalBill: sanitizedBill,
-    };
-    
-    // Create the cleaning service request
-    const cleaningRequest: Omit<ServiceRequest, 'id'> = {
-      stayId: stay.stayId,
-      roomNumber: room.number,
-      service: 'Post-Checkout Cleaning',
-      status: 'Pending',
-      time: 'Now',
-      creationTime: new Date(),
-      staff: 'Housekeeping',
-      price: 0,
-      category: 'Housekeeping Services',
-      isManualCharge: true,
-      createdBy: 'system'
-    };
-    addServiceRequests([cleaningRequest]);
+    try {
+        await runTransaction(firestore, async (transaction) => {
+            const roomDoc = await transaction.get(roomRef);
+            if (!roomDoc.exists()) {
+                throw new Error("Room does not exist!");
+            }
+            const currentRoomData = roomDoc.data() as Room;
 
-    if (finalBill.total > 0 || (finalBill.total === 0 && stay.isBilledToCompany)) {
-        addDocumentNonBlocking(checkoutHistoryCollectionRef, checkedOutStay);
+            const stayExists = (currentRoomData.stays || []).some(s => s.stayId === stay.stayId);
+            if (!stayExists) {
+                console.warn(`Stay ${stay.stayId} already removed from room ${room.id}. Skipping duplicate checkout.`);
+                toast({
+                    title: "Already Checked Out",
+                    description: `${stay.guestName} has already been checked out.`
+                });
+                return; 
+            }
+
+            const sanitizedBill: FinalBill = {
+                roomCharges: {
+                    label: finalBill.roomCharges?.label || 'Room Charge',
+                    amount: finalBill.roomCharges?.amount ?? 0,
+                },
+                serviceCharges: (finalBill.serviceCharges || []).map(sc => ({
+                    id: sc.id || `sc-${Date.now()}`,
+                    stayId: sc.stayId || stay.stayId,
+                    roomNumber: sc.roomNumber || room.number,
+                    service: sc.service || 'Unknown Service',
+                    status: sc.status || 'Completed',
+                    time: sc.time || 'N/A',
+                    creationTime: sc.creationTime || new Date(),
+                    completionTime: sc.completionTime || null,
+                    staff: sc.staff || 'N/A',
+                    assignedTo: sc.assignedTo || null,
+                    createdBy: sc.createdBy || null,
+                    isManualCharge: sc.isManualCharge || false,
+                    price: sc.price ?? 0,
+                    category: sc.category || 'Other',
+                    serviceId: sc.serviceId || null,
+                    quantity: sc.quantity || 1,
+                })),
+                subtotal: finalBill.subtotal ?? 0,
+                serviceChargeAmount: finalBill.serviceChargeAmount ?? 0,
+                gstAmount: finalBill.gstAmount ?? 0,
+                paidAmount: finalBill.paidAmount ?? 0,
+                discount: finalBill.discount ?? 0,
+                total: finalBill.total ?? 0,
+                paymentMethod: finalBill.paymentMethod || 'Unknown',
+            };
+
+            const checkedOutStay: Omit<CheckedOutStay, 'id'> = {
+              stayId: stay.stayId,
+              roomNumber: room.number,
+              roomType: room.type,
+              guestName: stay.guestName,
+              checkInDate: stay.checkInDate,
+              checkOutDate: new Date(),
+              finalBill: sanitizedBill,
+            };
+            
+            const cleaningRequest: Omit<ServiceRequest, 'id'> = {
+              stayId: stay.stayId,
+              roomNumber: room.number,
+              service: 'Post-Checkout Cleaning',
+              status: 'Pending',
+              time: 'Now',
+              creationTime: new Date(),
+              staff: 'Housekeeping',
+              price: 0,
+              category: 'Housekeeping Services',
+              isManualCharge: true,
+              createdBy: 'system'
+            };
+
+            if (finalBill.total > 0 || (finalBill.total === 0 && stay.isBilledToCompany)) {
+                const historyDocRef = doc(historyCollectionRef);
+                transaction.set(historyDocRef, checkedOutStay);
+            }
+            
+            const cleaningRequestRef = doc(serviceRequestCollectionRef);
+            transaction.set(cleaningRequestRef, cleaningRequest);
+            
+            transaction.delete(activeStayRef);
+
+            const newStaysArray = (currentRoomData.stays || []).filter(s => s.stayId !== stay.stayId);
+            transaction.update(roomRef, {
+                stays: newStaysArray,
+                guestName: null,
+                stayId: null,
+                checkInDate: null,
+                status: 'Cleaning',
+                checkOutDate: new Date()
+            });
+        });
+
+        toast({
+            title: "Guest Checked Out",
+            description: `${stay.guestName} has been successfully checked out from Room ${room.number}.`
+        });
+
+    } catch (e) {
+        console.error("Checkout transaction failed: ", e);
+        toast({
+            variant: "destructive",
+            title: "Checkout Failed",
+            description: "A problem occurred during checkout, possibly due to conflicting operations. Please try again.",
+        });
     }
-    
-    removeStay(room.id, stay.stayId);
-    
-    updateRoom(room.id, {
-        status: 'Cleaning',
-        checkOutDate: new Date()
-    });
-
-
-  },[checkoutHistoryCollectionRef, firestore, hotelId, removeStay, addServiceRequests, updateRoom]);
+  }, [firestore, hotelId, toast]);
 
   const addCategory = useCallback((categoryData: Omit<RoomCategory, 'id'>) => {
     if (!roomCategoriesCollectionRef) return;

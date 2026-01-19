@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -112,7 +113,7 @@ export function ManageStaySheet({ room: roomProp, rooms, stayId: stayIdProp, isO
     onClose();
   };
   
-  const handleStatusChange = (newStatus?: RoomStatus) => {
+  const handleStatusChange = async (newStatus?: RoomStatus) => {
       const statusToApply = newStatus || status;
       if (!room || !statusToApply) return;
 
@@ -121,7 +122,7 @@ export function ManageStaySheet({ room: roomProp, rooms, stayId: stayIdProp, isO
         toast({ title: "Guest Checked In", description: `${stay.guestName} has been checked into Room ${room.number}.`});
       } else if (statusToApply === 'Available' && stay) {
         // This is a cancellation for a "Waiting for Check-in" or "Reserved" stay.
-        removeStay(room.id, stay.stayId);
+        await removeStay(room.id, stay.stayId);
         toast({ title: "Booking Cancelled", description: `The booking for Room ${room.number} has been cancelled.` });
       } else {
         // This handles cases like 'Cleaning' -> 'Available'
@@ -131,9 +132,9 @@ export function ManageStaySheet({ room: roomProp, rooms, stayId: stayIdProp, isO
       onClose();
   }
   
-  const handleDeleteBooking = () => {
+  const handleDeleteBooking = async () => {
     if(!room || !stay) return;
-    removeStay(room.id, stay.stayId);
+    await removeStay(room.id, stay.stayId);
     toast({ title: "Booking Deleted", description: "The booking has been removed.", variant: "destructive" });
     onClose();
   }
