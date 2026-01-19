@@ -71,7 +71,8 @@ service cloud.firestore {
     // ======================================================================
     
     match /hotels/{hotelId} {
-      allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      // **FIXED**: This rule now uses resource.data to avoid circular dependency, allowing other rules to use get() on this path.
+      allow read: if (request.auth != null && request.auth.uid == hotelId) || (request.auth != null && resource.data.ownerUids.hasAny([request.auth.uid])) || isTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow create: if isDataOwner(hotelId);
       allow update: if isHotelAdmin(hotelId) || isSuperAdmin();
       allow list: if isSuperAdmin() || isFranchiseOwner();
@@ -120,5 +121,3 @@ service cloud.firestore {
     match /hotels/{hotelId}/vendors/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
   }
 }
-
-    
