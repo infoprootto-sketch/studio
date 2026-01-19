@@ -48,3 +48,37 @@ Your project is already configured for easy deployment to Firebase.
 
 2.  **Done!**
     After the command finishes, your application will be live on Firebase Hosting. The terminal will provide you with the URL to your live site.
+
+## Step 3: Troubleshooting
+
+### If `git push` fails...
+
+Sometimes, a regular `git push` might fail with an error like "Updates were rejected because the remote contains work that you do not have locally." This can happen if the local Git repository's history has diverged from the remote repository on GitHub.
+
+This might have occurred if you ran a script that reset the local Git data (for instance, a script that deleted the `.git` directory and re-initialized it).
+
+In this specific case, if you are certain that your local code is the correct and final version you want to save, you can perform a **force push**.
+
+**Warning:** A force push will overwrite the remote repository's history with your local history. Use this command with caution and only when you are sure it is what you want to do.
+
+1.  **Re-add your remote repository (if you reset it):**
+    If you re-initialized your repository, you need to tell Git where to push your code again.
+    ```bash
+    # Replace the URL with your own repository's URL
+    git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
+    ```
+    If you get an error that the remote "origin" already exists, you can skip this step.
+
+2.  **Stage, Commit, and Force Push:**
+    ```bash
+    # Stage all your latest changes
+    git add .
+
+    # Create a new commit
+    git commit -m "feat: Force push to sync repository after fixes"
+
+    # Force push to the 'main' branch
+    git push --force origin main
+    ```
+
+After the force push is successful, you can proceed with the deployment step.
