@@ -6,6 +6,6 @@ import nextJs from '@genkit-ai/next';
 export const ai = genkit({
   plugins: [
     googleAI(),
-    nextJs,
+    nextJs(),
   ],
 });
