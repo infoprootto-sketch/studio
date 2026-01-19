@@ -2,7 +2,7 @@
 
 import { ServiceQueue } from "@/components/dashboard/service-queue";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TeamMemberAttendanceCard } from "../dashboard/team-member-attendance-card";
+import { TeamMemberAttendanceCard } from "./team-member-attendance-card";
 
 export function MemberDashboard() {
   return (
