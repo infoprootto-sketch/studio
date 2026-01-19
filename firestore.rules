@@ -104,7 +104,8 @@ service cloud.firestore {
     }
     match /hotels/{hotelId}/serviceRequests/{reqId} {
         allow create: if isTeamMember(hotelId) || (request.auth == null && request.resource.data.stayId != null && exists(/databases/$(database)/documents/activeStays/$(request.resource.data.stayId)));
-        allow get, list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin() || exists(/databases/$(database)/documents/activeStays/$(resource.data.stayId));
+        allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin() || exists(/databases/$(database)/documents/activeStays/$(resource.data.stayId));
+        allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
         allow update: if isOwnerOrTeamMember(hotelId);
         allow delete: if isHotelAdmin(hotelId);
     }
@@ -112,10 +113,7 @@ service cloud.firestore {
     // --- STAFF-ONLY COLLECTIONS ---
     match /hotels/{hotelId}/checkoutHistory/{docId} { allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin(); allow create, delete: if isHotelAdmin(hotelId); allow update: if false; }
     match /hotels/{hotelId}/teamMembers/{userId} {
-        // ** THE FIX IS HERE **
-        // Allow any authenticated user to read team member data. This is required for the isTeamMember() function to work correctly in other rules.
-        // Write access remains restricted.
-        allow read: if request.auth != null;
+        allow read: if isDataOwner(userId) || isHotelAdmin(hotelId);
         allow create: if isHotelAdmin(hotelId);
         allow update: if isHotelAdmin(hotelId) || isDataOwner(userId);
         allow delete: if isHotelAdmin(hotelId) || isDataOwner(userId);
@@ -123,7 +121,7 @@ service cloud.firestore {
     match /hotels/{hotelId}/departments/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
     match /hotels/{hotelId}/shifts/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
     match /hotels/{hotelId}/slaRules/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
-    match /hotels/{hotelId}/corporateClients/{docId} { allow read, write: if isOwnerOrTeamMember(hotelId); }
+    match /hotels/{hotelId}/corporateClients/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isOwnerOrTeamMember(hotelId); }
     match /hotels/{hotelId}/inventory/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
     match /hotels/{hotelId}/stockMovements/{docId} { allow create: if isOwnerOrTeamMember(hotelId); allow delete: if isHotelAdmin(hotelId); allow read: if isOwnerOrTeamMember(hotelId); allow update: if false; }
     match /hotels/{hotelId}/vendors/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
