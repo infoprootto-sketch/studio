@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useMemo, ReactNode, useState, useEffect } from 'react';
@@ -55,8 +54,7 @@ export function StayProvider({ children, stayId }: { children: ReactNode; stayId
   
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
-  const [serviceLog, setServiceLog] = useState<ServiceRequest[]>([]);
-
+  
   // This query is intentionally broad to work around Firestore's limitations on OR queries.
   // We fetch all active broadcasts and filter them on the client.
   const broadcastsQuery = useMemoFirebase(() => (
@@ -108,39 +106,22 @@ export function StayProvider({ children, stayId }: { children: ReactNode; stayId
         } : undefined
     };
   }, [roomData, stayId]);
+  
+  // NEW: Real-time query for service requests based on stayId
+  const serviceRequestsQuery = useMemoFirebase(() => (
+    firestore && hotelId && stayId ? query(collection(firestore, 'hotels', hotelId, 'serviceRequests'), where('stayId', '==', stayId)) : null
+  ), [firestore, hotelId, stayId]);
 
-  useEffect(() => {
-    const fetchServiceRequests = async () => {
-      if (!firestore || !hotelId || !stay?.serviceRequestIds || stay.serviceRequestIds.length === 0) {
-        setServiceLog([]);
-        return;
-      }
-      
-      const requests: ServiceRequest[] = [];
-      for (const id of stay.serviceRequestIds) {
-        const reqRef = doc(firestore, 'hotels', hotelId, 'serviceRequests', id);
-        try {
-          const docSnap = await getDoc(reqRef);
-          if (docSnap.exists()) {
-            const data = docSnap.data() as ServiceRequest;
-            requests.push({ 
-              ...data,
-              id: docSnap.id,
-              creationTime: (data.creationTime as any)?.toDate ? (data.creationTime as any).toDate() : new Date(data.creationTime),
-              completionTime: data.completionTime && ((data.completionTime as any)?.toDate ? (data.completionTime as any).toDate() : new Date(data.completionTime)),
-            });
-          }
-        } catch (error) {
-          // This might be a permission error if the rule is not set up for get, but we'll handle it gracefully
-          console.warn(`Could not fetch service request ${id}:`, error);
-        }
-      }
-      setServiceLog(requests);
-    };
-
-    fetchServiceRequests();
-  }, [stay, firestore, hotelId]);
-
+  const { data: serviceLogData } = useCollection<ServiceRequest>(serviceRequestsQuery);
+  
+  const serviceLog = useMemo(() => {
+    if (!serviceLogData) return [];
+    return serviceLogData.map(req => ({
+      ...req,
+      creationTime: (req.creationTime as any)?.toDate ? (req.creationTime as any).toDate() : new Date(req.creationTime),
+      completionTime: req.completionTime && ((req.completionTime as any)?.toDate ? (req.completionTime as any).toDate() : new Date(req.completionTime)),
+    }));
+  }, [serviceLogData]);
 
   const billSummary = useMemo(() => {
     if (!stay) return null;
@@ -162,25 +143,12 @@ export function StayProvider({ children, stayId }: { children: ReactNode; stayId
   const addServiceRequests = async (requests: Omit<ServiceRequest, 'id'>[]) => {
     if (!room || !stay || !firestore || !hotelId) return;
 
+    // This function now only creates the service request documents.
+    // The link is established by the `stayId` field.
     const addedRequestIds = await addServiceRequestsToContext(requests);
     
-    // Update the stay object with the new service request IDs
-    const roomRef = doc(firestore, 'hotels', hotelId, 'rooms', room.id);
-    const updatedServiceRequestIds = arrayUnion(...addedRequestIds);
-    
-    const newStaysArray = room.stays.map(s => {
-      if (s.stayId === stayId) {
-        return {
-          ...s,
-          serviceRequestIds: [...(s.serviceRequestIds || []), ...addedRequestIds]
-        };
-      }
-      return s;
-    });
-
-    updateDocumentNonBlocking(roomRef, { stays: newStaysArray });
-
-    requests.forEach((req, index) => {
+    // Inventory logic remains the same.
+    requests.forEach((req) => {
       if (req.serviceId) {
         const service = hotelServices.find(s => s.id === req.serviceId);
         if (service && service.inventoryItemId && service.inventoryQuantityConsumed) {
