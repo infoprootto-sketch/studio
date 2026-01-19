@@ -1,4 +1,3 @@
-
 'use client';
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "../ui/button";
 import { IconMapping } from "@/lib/icon-mapping";
 import { useMemo, useState, useEffect } from "react";
+import { GuestServiceTimingsDialog } from "./service-timings-dialog";
 
 
 export function ServiceHub() {
@@ -22,6 +22,7 @@ export function ServiceHub() {
     const { toast } = useToast();
     const hotelId = useHotelId();
     const [isClient, setIsClient] = useState(false);
+    const [isTimingsOpen, setIsTimingsOpen] = useState(false);
 
     useEffect(() => {
         setIsClient(true);
@@ -168,6 +169,20 @@ export function ServiceHub() {
                     </CardContent>
                 </Card>
             </Link>
+            
+             <Card onClick={() => setIsTimingsOpen(true)} className="cursor-pointer hover:bg-primary/5 hover:border-primary transition-all">
+                <CardContent className="p-4 flex items-center gap-4">
+                    <div className="bg-primary/10 text-primary p-3 rounded-lg">
+                        <Clock className="h-6 w-6" />
+                    </div>
+                    <div>
+                        <p className="font-semibold text-lg">Service Timings</p>
+                        <p className="text-sm text-muted-foreground">View operational hours for our services.</p>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <GuestServiceTimingsDialog isOpen={isTimingsOpen} onClose={() => setIsTimingsOpen(false)} />
         </div>
     )
 }

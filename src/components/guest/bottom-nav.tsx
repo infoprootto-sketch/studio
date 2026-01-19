@@ -18,7 +18,6 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useStay } from "@/context/stay-context";
 import { useState, useEffect } from "react";
-import { GuestServiceTimingsDialog } from "./service-timings-dialog";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
@@ -30,7 +29,6 @@ export function BottomNav() {
     const params = useParams();
     const { toast } = useToast();
     const { room, stay, addServiceRequests } = useStay();
-    const [isTimingsOpen, setIsTimingsOpen] = useState(false);
     const [emergencyType, setEmergencyType] = useState<string>('');
     const [otherDetails, setOtherDetails] = useState('');
     const hotelId = params.hotelId as string;
@@ -44,7 +42,6 @@ export function BottomNav() {
         { href: `/guest/${hotelId}/${stay?.stayId}`, label: 'Home', icon: Home, exact: true },
         { href: `/guest/${hotelId}/${stay?.stayId}/order`, label: 'Order', icon: Utensils },
         { href: `/guest/${hotelId}/${stay?.stayId}/requests`, label: 'Requests', icon: History },
-        { href: `/guest/${hotelId}/${stay?.stayId}/explore`, label: 'Explore', icon: Map },
         { href: `/guest/${hotelId}/${stay?.stayId}/bill`, label: 'Bill', icon: FileText },
     ];
 
@@ -101,7 +98,7 @@ export function BottomNav() {
             <AlertDialog>
                 <div className="fixed bottom-0 left-0 right-0 bg-background border-t z-50">
                     <div className="container mx-auto h-20 px-4">
-                        <div className="grid grid-cols-7 items-center h-full">
+                        <div className="grid grid-cols-5 items-center h-full">
                             {navItems.map((item) => {
                                 const isReady = isClient && !!stay?.stayId;
                                 const href = isReady ? item.href : '#';
@@ -124,10 +121,6 @@ export function BottomNav() {
                                     </Link>
                                 );
                             })}
-                            <button onClick={() => setIsTimingsOpen(true)} className="flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary">
-                                <Clock className="h-6 w-6" />
-                                <span className="text-xs font-medium">Timings</span>
-                            </button>
                             <AlertDialogTrigger asChild>
                                 <button className="flex flex-col items-center justify-center gap-1 text-destructive animate-pulse">
                                     <AlertTriangle className="h-6 w-6" />
@@ -167,8 +160,6 @@ export function BottomNav() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-
-            <GuestServiceTimingsDialog isOpen={isTimingsOpen} onClose={() => setIsTimingsOpen(false)} />
         </>
     );
 }
