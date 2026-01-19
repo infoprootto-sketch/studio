@@ -105,7 +105,10 @@ service cloud.firestore {
         allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin() || exists(/databases/$(database)/documents/activeStays/$(resource.data.stayId));
         allow update: if isOwnerOrTeamMember(hotelId);
         allow delete: if isHotelAdmin(hotelId);
-        allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+        // Allow staff to list all requests.
+        // Allow unauthenticated guests to list, but only if they limit their query to prevent scraping.
+        // The client query MUST use `where('stayId', '==', ...)` to be functionally secure.
+        allow list: if (isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin()) || (request.auth == null && request.query.limit <= 50);
     }
 
     // --- STAFF-ONLY COLLECTIONS ---

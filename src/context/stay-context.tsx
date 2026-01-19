@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useMemo, ReactNode, useState, useEffect } from 'react';
@@ -9,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useServices } from './service-context';
 import { useInventory } from './inventory-context';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { doc, collection, where, query, getDoc, arrayUnion } from 'firebase/firestore';
+import { doc, collection, where, query, getDoc, arrayUnion, limit } from 'firebase/firestore';
 import { useHotelId } from './hotel-id-context';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
@@ -48,7 +49,7 @@ type CartItem = {
 export function StayProvider({ children, stayId }: { children: ReactNode; stayId: string }) {
   const firestore = useFirestore();
   const hotelId = useHotelId();
-  const { addServiceRequests: addServiceRequestsToContext, hotelServices } = useServices();
+  const { addServiceRequests: addServiceRequestsToContext } = useServices();
   const { gstRate, serviceChargeRate } = useSettings();
   const { inventory, updateInventoryItem, addStockMovement } = useInventory();
   
@@ -107,9 +108,8 @@ export function StayProvider({ children, stayId }: { children: ReactNode; stayId
     };
   }, [roomData, stayId]);
   
-  // NEW: Real-time query for service requests based on stayId
   const serviceRequestsQuery = useMemoFirebase(() => (
-    firestore && hotelId && stayId ? query(collection(firestore, 'hotels', hotelId, 'serviceRequests'), where('stayId', '==', stayId)) : null
+    firestore && hotelId && stayId ? query(collection(firestore, 'hotels', hotelId, 'serviceRequests'), where('stayId', '==', stayId), limit(50)) : null
   ), [firestore, hotelId, stayId]);
 
   const { data: serviceLogData } = useCollection<ServiceRequest>(serviceRequestsQuery);
@@ -122,6 +122,7 @@ export function StayProvider({ children, stayId }: { children: ReactNode; stayId
       completionTime: req.completionTime && ((req.completionTime as any)?.toDate ? (req.completionTime as any).toDate() : new Date(req.completionTime)),
     }));
   }, [serviceLogData]);
+
 
   const billSummary = useMemo(() => {
     if (!stay) return null;
