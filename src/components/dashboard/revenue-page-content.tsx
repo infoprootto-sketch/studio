@@ -1,9 +1,8 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { IndianRupee, TrendingUp, BedDouble, LogOut, DollarSign, AreaChart } from 'lucide-react';
+import { IndianRupee, TrendingUp, BedDouble, LogOut, AreaChart } from 'lucide-react';
 import { useSettings } from '@/context/settings-context';
 import { RevenueChart } from '@/components/dashboard/revenue-chart';
 import { OccupancyChart } from '@/components/dashboard/occupancy-chart';
@@ -93,7 +92,7 @@ export default function RevenuePageContent({ data, occupancyData, todaysDepartur
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Expected Revenue Today</CardTitle>
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <IndianRupee className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{formatPrice(expectedRevenue)}</div>

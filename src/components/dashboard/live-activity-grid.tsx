@@ -11,7 +11,7 @@ import { differenceInCalendarDays, differenceInMinutes, isToday, isSameDay, addD
 import { useRooms } from '@/context/room-context';
 import { useSettings } from '@/context/settings-context';
 import { Input } from '@/components/ui/input';
-import { Search, DollarSign, LogOut, Calendar } from 'lucide-react';
+import { Search, IndianRupee, LogOut, Calendar } from 'lucide-react';
 import { ManageStaySheet } from './manage-stay-sheet';
 import { useServices } from '@/context/service-context';
 import { useBilling } from '@/context/billing-context';
@@ -362,7 +362,7 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Expected Revenue Today</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <IndianRupee className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">{isClient ? formatPrice(expectedRevenue) : '...'}</div>

@@ -1,10 +1,9 @@
-
 'use client';
 
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DollarSign, TrendingUp, BedDouble, Zap, Star } from 'lucide-react';
+import { TrendingUp, BedDouble, Zap, Star } from 'lucide-react';
 import { useSettings } from '@/context/settings-context';
 import { RevenueChart, type ChartDataPoint } from './revenue-chart';
 import { OccupancyChart } from './occupancy-chart';
