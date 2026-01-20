@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ServiceQueueReport } from './service-queue-report';
 import { useSettings } from '@/context/settings-context';
 import { useRooms } from '@/context/room-context';
+import { useInventory } from '@/context/inventory-context';
 
 
 const statusColors: Record<ServiceRequestStatus, string> = {
@@ -38,7 +39,8 @@ export function ServiceQueue({ role = 'admin' }: { role?: 'admin' | 'reception' 
     const firestore = useFirestore();
     const hotelId = useHotelId();
     const { legalName } = useSettings();
-    const { rooms, updateRoom } = useRooms();
+    const { rooms, updateRoom, roomCategories } = useRooms();
+    const { inventory, updateInventoryItem, addStockMovement } = useInventory();
     
     const [currentTime, setCurrentTime] = useState(new Date());
     useEffect(() => {
@@ -151,14 +153,42 @@ export function ServiceQueue({ role = 'admin' }: { role?: 'admin' | 'reception' 
 
         updateDocumentNonBlocking(requestRef, update);
 
-        // If a cleaning task is completed, mark the room as available.
+        // If a cleaning task is completed, mark the room as available and deduct inventory.
         if (request.service === 'Post-Checkout Cleaning' && newStatus === 'Completed') {
             const roomToUpdate = rooms.find(r => r.number === request.roomNumber);
             if (roomToUpdate) {
                 updateRoom(roomToUpdate.id, { status: 'Available', checkOutDate: null });
+                
+                // Deduct inventory
+                const category = roomCategories.find(c => c.name === roomToUpdate.type);
+                if (category && category.cleaningConsumables) {
+                  let totalDeductions = 0;
+                  
+                  category.cleaningConsumables.forEach(consumable => {
+                    const inventoryItem = inventory.find(i => i.id === consumable.itemId);
+                    if (inventoryItem) {
+                      totalDeductions++;
+                      updateInventoryItem(inventoryItem.id, { stock: inventoryItem.stock - consumable.quantity });
+                      addStockMovement({
+                        itemId: inventoryItem.id,
+                        itemName: inventoryItem.name,
+                        type: 'Consumption',
+                        quantity: -consumable.quantity,
+                        date: new Date(),
+                        notes: `Room ${roomToUpdate.number} cleaning`
+                      });
+                    }
+                  });
+                  
+                  if (totalDeductions > 0) {
+                    toast({
+                      title: "Inventory Updated",
+                      description: `${totalDeductions} item(s) deducted for cleaning Room ${roomToUpdate.number}.`,
+                    });
+                  }
+                }
             }
         }
-
 
         toast({
             title: `Task ${newStatus}`,
@@ -416,5 +446,3 @@ export function ServiceQueue({ role = 'admin' }: { role?: 'admin' | 'reception' 
 
     
 }
-
-    
