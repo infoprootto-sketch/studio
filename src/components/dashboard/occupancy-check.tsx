@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -12,18 +13,9 @@ import { format, isWithinInterval, startOfDay, subDays } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart"
-import {
-  PolarGrid,
-  RadialBar,
-  RadialBarChart,
-} from "recharts"
 import { ScrollArea } from '../ui/scroll-area';
 import { Progress } from '../ui/progress';
+import { Separator } from '../ui/separator';
 
 
 interface CategoryOccupancyStat {
@@ -84,14 +76,29 @@ function calculateOccupancyStats(rooms: Room[], roomCategories: RoomCategory[], 
 
 function OccupancySkeleton() {
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 pt-2">
-            {[...Array(3)].map((_, i) => (
-                 <div key={i} className="flex flex-col items-center gap-2">
-                    <Skeleton className="h-24 w-24 rounded-full" />
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-3 w-12" />
+        <div className="space-y-6">
+            <div>
+                <div className="flex justify-between items-baseline mb-2">
+                    <Skeleton className="h-7 w-1/3" />
+                    <Skeleton className="h-8 w-1/4" />
                 </div>
-            ))}
+                <Skeleton className="h-3 w-full" />
+            </div>
+            <Separator />
+            <div>
+                <Skeleton className="h-6 w-1/4 mb-4" />
+                <div className="space-y-4">
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="space-y-2">
+                            <div className="flex justify-between">
+                                <Skeleton className="h-4 w-1/3" />
+                                <Skeleton className="h-3 w-1/6" />
+                            </div>
+                            <Skeleton className="h-2 w-full" />
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
     )
 }
@@ -166,74 +173,50 @@ export function OccupancyCheck() {
             )}
         </div>
       </CardHeader>
-       <CardContent className="space-y-4">
-            <div className="pt-2">
-                 {isClient ? (
-                    (rooms.length > 0 && roomCategories.length > 0) ? (
-                        <div className="grid grid-cols-1 md:grid-cols-3 items-start gap-8">
-                             <div className="md:col-span-1 flex flex-col items-center justify-center gap-4 text-center">
-                                <ChartContainer
-                                    config={{
-                                        percentage: {
-                                            label: "Occupancy",
-                                            color: "hsl(var(--primary))",
-                                        },
-                                    }}
-                                    className="mx-auto aspect-square h-32"
-                                >
-                                    <RadialBarChart
-                                        data={[{ name: 'occupied', value: overallStats.percentage, fill: "hsl(var(--primary))" }]}
-                                        startAngle={90}
-                                        endAngle={-270}
-                                        innerRadius="80%"
-                                        outerRadius="100%"
-                                        barSize={10}
-                                    >
-                                        <PolarGrid gridType="circle" radialLines={false} stroke="none" />
-                                        <RadialBar dataKey="value" background={{ fill: 'hsl(var(--muted))' }} cornerRadius={10} />
-                                        <ChartTooltip
-                                            cursor={false}
-                                            content={
-                                                <ChartTooltipContent
-                                                    hideLabel
-                                                    formatter={(value) => `${Number(value).toFixed(0)}% Occupied`}
-                                                />
-                                            }
-                                        />
-                                    </RadialBarChart>
-                                </ChartContainer>
-                                <div>
-                                    <p className="text-4xl font-bold tracking-tighter">{overallStats.occupied} / {overallStats.total}</p>
-                                    <p className="text-muted-foreground">rooms occupied</p>
-                                </div>
+       <CardContent className="pt-2">
+            {isClient ? (
+                (rooms.length > 0 && roomCategories.length > 0) ? (
+                    <div className="space-y-6">
+                        <div>
+                            <div className="flex justify-between items-baseline mb-2">
+                                <h3 className="font-semibold text-lg">Overall Occupancy</h3>
+                                <p className="text-2xl font-bold font-mono tracking-tight">
+                                    {overallStats.percentage.toFixed(0)}%
+                                    <span className="text-sm font-normal text-muted-foreground ml-2">
+                                        ({overallStats.occupied}/{overallStats.total})
+                                    </span>
+                                </p>
                             </div>
-                            <div className="md:col-span-2">
-                                <ScrollArea className="h-48">
-                                    <div className="space-y-4 pr-6">
-                                        {statsByCategory.map((stat) => (
-                                            stat.total > 0 && (
-                                                <div key={stat.categoryName}>
-                                                    <div className="flex justify-between items-center mb-1 text-sm">
-                                                        <span className="font-medium">{stat.categoryName}</span>
-                                                        <span className="text-muted-foreground font-mono">{stat.occupied} / {stat.total}</span>
-                                                    </div>
-                                                    <Progress value={stat.percentage} indicatorStyle={{ backgroundColor: stat.fill }} />
+                            <Progress value={overallStats.percentage} className="h-3" />
+                        </div>
+                        <Separator />
+                        <div>
+                            <h4 className="font-semibold mb-4">By Category</h4>
+                            <ScrollArea className="h-40">
+                                <div className="space-y-4 pr-4">
+                                    {statsByCategory.map((stat) => (
+                                        stat.total > 0 && (
+                                            <div key={stat.categoryName}>
+                                                <div className="flex justify-between items-center mb-1 text-sm">
+                                                    <span className="font-medium text-muted-foreground">{stat.categoryName}</span>
+                                                    <span className="font-mono text-xs">{stat.occupied} / {stat.total}</span>
                                                 </div>
-                                            )
-                                        ))}
-                                    </div>
-                                </ScrollArea>
-                            </div>
+                                                <Progress value={stat.percentage} indicatorStyle={{ backgroundColor: stat.fill }} className="h-2" />
+                                            </div>
+                                        )
+                                    ))}
+                                </div>
+                            </ScrollArea>
                         </div>
-                    ) : (
-                        <div className="text-center py-4 text-muted-foreground">
-                            No rooms or categories found.
-                        </div>
-                    )
-                 ) : (
-                    <OccupancySkeleton />
-                 )}
-             </div>
+                    </div>
+                ) : (
+                    <div className="text-center py-4 text-muted-foreground">
+                        No rooms or categories found.
+                    </div>
+                )
+            ) : (
+                <OccupancySkeleton />
+            )}
         </CardContent>
     </Card>
   );
