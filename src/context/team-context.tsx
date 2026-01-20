@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
@@ -6,7 +7,7 @@ import type { TeamMember, Department, Shift, SlaRule, AttendanceRecord, Hotel } 
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { useHotelId } from './hotel-id-context';
 import { collection, doc, writeBatch, runTransaction, getDoc, query, where, increment } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 interface TeamContextType {
@@ -74,59 +75,53 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   const saveTeamMember = async (memberData: Partial<TeamMember>, password?: string): Promise<boolean> => {
     if (!firestore || !hotelId) return false;
-
-    // Handle new member creation
-    if (!memberData.id && password && memberData.email) {
-      if (!auth) {
-          console.error("Auth service is not available for creating user.");
-          return false;
-      }
-      try {
-        // Create Firebase Auth user first
-        const userCredential = await createUserWithEmailAndPassword(auth, memberData.email, password);
-        const newUserId = userCredential.user.uid;
-
-        // Now run a transaction to create the Firestore document
-        await runTransaction(firestore, async (transaction) => {
-            const hotelRef = doc(firestore, 'hotels', hotelId);
-            const hotelDoc = await transaction.get(hotelRef);
-            if (!hotelDoc.exists()) throw new Error("Hotel not found!");
-
-            const memberRef = doc(firestore, 'hotels', hotelId, 'teamMembers', newUserId); // Use the new UID
-
-            const newMember = {
-                name: memberData.name!,
-                email: memberData.email!,
-                department: memberData.department!,
-                role: memberData.role!,
-                shiftId: memberData.shiftId!,
-                attendanceStatus: 'Clocked Out' as const,
-                restaurantId: memberData.restaurantId || null,
-            };
-            transaction.set(memberRef, newMember);
-
-            // Update hotel counts
-            const updates: Partial<Hotel> = { teamSize: increment(1) };
-            if (memberData.role === 'Admin') updates.adminCount = increment(1);
-            if (memberData.role === 'Manager') updates.managerCount = increment(1);
-            if (memberData.role === 'Reception') updates.receptionCount = increment(1);
-            transaction.update(hotelRef, updates);
-        });
-        return true;
-      } catch (e: any) {
-         console.error("New member creation failed:", e);
-         // If auth user was created but firestore failed, we have an orphan auth user.
-         // For a real app, you might want to try to delete the auth user here.
-         return false;
-      }
-    } else if (memberData.id) {
-        // This is the existing logic for updating a member
+    
+    // Handle editing an existing member
+    if (memberData.id) {
         const memberRef = doc(firestore, 'hotels', hotelId, 'teamMembers', memberData.id);
         updateDocumentNonBlocking(memberRef, { ...memberData, restaurantId: memberData.restaurantId || null });
         return true;
     }
 
-    return false; // Should not happen if logic is correct
+    // Handle new member creation
+    if (!memberData.id && password && memberData.email) {
+      if (!auth || !user) {
+          console.error("Auth service is not available or admin is not logged in.");
+          return false;
+      }
+      const adminUid = user.uid; // Capture the UID of the admin performing the action.
+
+      try {
+        // This will sign in the new user, changing the auth context.
+        const userCredential = await createUserWithEmailAndPassword(auth, memberData.email, password);
+        const newUserId = userCredential.user.uid;
+
+        const memberRef = doc(firestore, 'hotels', hotelId, 'teamMembers', newUserId);
+        const newMember = {
+            name: memberData.name!,
+            email: memberData.email!,
+            department: memberData.department!,
+            role: memberData.role!,
+            shiftId: memberData.shiftId!,
+            attendanceStatus: 'Clocked Out' as const,
+            restaurantId: memberData.restaurantId || null,
+            creatorId: adminUid, // Embed the admin's UID for security rule validation.
+        };
+
+        // Use setDoc directly. This is executed by the new user. The new security rule will permit this.
+        await setDocumentNonBlocking(memberRef, newMember, {});
+        
+        // The hotel document counts can no longer be updated here due to permissions.
+        // A background sync or periodic job is now responsible for ensuring count accuracy.
+
+        return true;
+      } catch (e: any) {
+         console.error("New member creation failed:", e);
+         return false;
+      }
+    }
+
+    return false;
   };
   
   const deleteTeamMember = async (memberId: string): Promise<boolean> => {
