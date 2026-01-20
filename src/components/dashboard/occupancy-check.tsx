@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -21,6 +22,8 @@ import {
   RadialBar,
   RadialBarChart,
 } from "recharts"
+import { ScrollArea } from '../ui/scroll-area';
+import { Progress } from '../ui/progress';
 
 
 interface CategoryOccupancyStat {
@@ -167,8 +170,8 @@ export function OccupancyCheck() {
             <div className="pt-2">
                  {isClient ? (
                     (rooms.length > 0 && roomCategories.length > 0) ? (
-                        <div className="flex flex-col md:flex-row items-center gap-8">
-                             <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-12">
+                        <div className="grid grid-cols-1 md:grid-cols-3 items-start gap-8">
+                             <div className="md:col-span-1 flex flex-col items-center justify-center gap-4 text-center">
                                 <ChartContainer
                                     config={{
                                         percentage: {
@@ -176,7 +179,7 @@ export function OccupancyCheck() {
                                             color: "hsl(var(--primary))",
                                         },
                                     }}
-                                    className="mx-auto aspect-square h-40"
+                                    className="mx-auto aspect-square h-32"
                                 >
                                     <RadialBarChart
                                         data={[{ name: 'occupied', value: overallStats.percentage, fill: "hsl(var(--primary))" }]}
@@ -184,7 +187,7 @@ export function OccupancyCheck() {
                                         endAngle={-270}
                                         innerRadius="80%"
                                         outerRadius="100%"
-                                        barSize={12}
+                                        barSize={10}
                                     >
                                         <PolarGrid gridType="circle" radialLines={false} stroke="none" />
                                         <RadialBar dataKey="value" background={{ fill: 'hsl(var(--muted))' }} cornerRadius={10} />
@@ -197,61 +200,29 @@ export function OccupancyCheck() {
                                                 />
                                             }
                                         />
-                                        <text
-                                            x="50%"
-                                            y="50%"
-                                            textAnchor="middle"
-                                            dominantBaseline="middle"
-                                            className="fill-foreground text-4xl font-bold"
-                                        >
-                                            {overallStats.percentage.toFixed(0)}%
-                                        </text>
                                     </RadialBarChart>
                                 </ChartContainer>
-                                <div className="text-center sm:text-left">
-                                    <p className="text-5xl font-bold tracking-tighter">{overallStats.occupied} / {overallStats.total}</p>
+                                <div>
+                                    <p className="text-4xl font-bold tracking-tighter">{overallStats.occupied} / {overallStats.total}</p>
                                     <p className="text-muted-foreground">rooms occupied</p>
                                 </div>
                             </div>
-                            <div className="w-full flex-1 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-6 border-t md:border-t-0 md:border-l md:pl-8">
-                                {statsByCategory.map(stat => (
-                                    stat.total > 0 && (
-                                        <div key={stat.categoryName} className="flex flex-col items-center gap-1">
-                                            <ChartContainer
-                                                config={{
-                                                    percentage: {
-                                                        label: "Occupancy",
-                                                        color: stat.fill,
-                                                    },
-                                                }}
-                                                className="mx-auto aspect-square h-24"
-                                                >
-                                                <RadialBarChart
-                                                    data={[{ name: 'occupied', value: stat.percentage, fill: stat.fill }]}
-                                                    startAngle={90}
-                                                    endAngle={-270}
-                                                    innerRadius="70%"
-                                                    outerRadius="100%"
-                                                    barSize={8}
-                                                >
-                                                    <PolarGrid gridType="circle" radialLines={false} stroke="none" />
-                                                    <RadialBar dataKey="value" background={{ fill: 'hsl(var(--muted))' }} cornerRadius={5} />
-                                                    <ChartTooltip
-                                                        cursor={false}
-                                                        content={
-                                                            <ChartTooltipContent
-                                                                hideLabel
-                                                                formatter={(value) => `${Number(value).toFixed(0)}%`}
-                                                            />
-                                                        }
-                                                    />
-                                                </RadialBarChart>
-                                            </ChartContainer>
-                                            <p className="font-semibold text-sm">{stat.categoryName}</p>
-                                            <p className="text-xs text-muted-foreground">{stat.occupied} / {stat.total}</p>
-                                        </div>
-                                    )
-                                ))}
+                            <div className="md:col-span-2">
+                                <ScrollArea className="h-48">
+                                    <div className="space-y-4 pr-6">
+                                        {statsByCategory.map((stat) => (
+                                            stat.total > 0 && (
+                                                <div key={stat.categoryName}>
+                                                    <div className="flex justify-between items-center mb-1 text-sm">
+                                                        <span className="font-medium">{stat.categoryName}</span>
+                                                        <span className="text-muted-foreground font-mono">{stat.occupied} / {stat.total}</span>
+                                                    </div>
+                                                    <Progress value={stat.percentage} indicatorStyle={{ backgroundColor: stat.fill }} />
+                                                </div>
+                                            )
+                                        ))}
+                                    </div>
+                                </ScrollArea>
                             </div>
                         </div>
                     ) : (
