@@ -385,6 +385,8 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
   const archiveStay = useCallback(async (room: Room, stay: Stay, finalBill: FinalBill) => {
     if (!firestore || !hotelId) return;
 
+    const checkoutTimestamp = new Date(); // Use a single timestamp for consistency
+
     const roomRef = doc(firestore, 'hotels', hotelId, 'rooms', room.id);
     const historyCollectionRef = collection(firestore, 'hotels', hotelId, 'checkoutHistory');
     const serviceRequestCollectionRef = collection(firestore, 'hotels', hotelId, 'serviceRequests');
@@ -400,12 +402,9 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
 
             const stayExists = (currentRoomData.stays || []).some(s => s.stayId === stay.stayId);
             if (!stayExists) {
-                console.warn(`Stay ${stay.stayId} already removed from room ${room.id}. Skipping duplicate checkout.`);
-                toast({
-                    title: "Already Checked Out",
-                    description: `${stay.guestName} has already been checked out.`
-                });
-                return; 
+                // If the stay is already gone, it means checkout has already happened.
+                // Throw a specific error to be caught and handled gracefully.
+                throw new Error("ALREADY_CHECKED_OUT");
             }
 
             const sanitizedBill: FinalBill = {
@@ -420,7 +419,7 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
                     service: sc.service || 'Unknown Service',
                     status: sc.status || 'Completed',
                     time: sc.time || 'N/A',
-                    creationTime: sc.creationTime || new Date(),
+                    creationTime: sc.creationTime || checkoutTimestamp,
                     completionTime: sc.completionTime || null,
                     staff: sc.staff || 'N/A',
                     assignedTo: sc.assignedTo || null,
@@ -446,7 +445,7 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
               roomType: room.type,
               guestName: stay.guestName,
               checkInDate: stay.checkInDate,
-              checkOutDate: new Date(),
+              checkOutDate: checkoutTimestamp, // Use consistent timestamp
               finalBill: sanitizedBill,
             };
             
@@ -456,7 +455,7 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
               service: 'Post-Checkout Cleaning',
               status: 'Pending',
               time: 'Now',
-              creationTime: new Date(),
+              creationTime: checkoutTimestamp, // Use consistent timestamp
               staff: 'Housekeeping',
               price: 0,
               category: 'Housekeeping Services',
@@ -481,7 +480,7 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
                 stayId: null,
                 checkInDate: null,
                 status: 'Cleaning',
-                checkOutDate: new Date()
+                checkOutDate: checkoutTimestamp, // Use consistent timestamp
             });
         });
 
@@ -490,13 +489,20 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
             description: `${stay.guestName} has been successfully checked out from Room ${room.number}.`
         });
 
-    } catch (e) {
-        console.error("Checkout transaction failed: ", e);
-        toast({
-            variant: "destructive",
-            title: "Checkout Failed",
-            description: "A problem occurred during checkout, possibly due to conflicting operations. Please try again.",
-        });
+    } catch (e: any) {
+        if (e.message === "ALREADY_CHECKED_OUT") {
+            toast({
+                title: "Already Checked Out",
+                description: `${stay.guestName} has already been checked out.`
+            });
+        } else {
+            console.error("Checkout transaction failed: ", e);
+            toast({
+                variant: "destructive",
+                title: "Checkout Failed",
+                description: "A problem occurred during checkout, possibly due to conflicting operations. Please try again.",
+            });
+        }
     }
   }, [firestore, hotelId, toast, addServiceRequests]);
 
