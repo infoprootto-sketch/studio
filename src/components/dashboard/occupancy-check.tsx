@@ -168,7 +168,7 @@ export function OccupancyCheck() {
                  {isClient ? (
                     (rooms.length > 0 && roomCategories.length > 0) ? (
                         <div className="flex flex-col md:flex-row items-center gap-8">
-                             <div className="flex flex-col items-center gap-4">
+                             <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-12">
                                 <ChartContainer
                                     config={{
                                         percentage: {
@@ -177,7 +177,7 @@ export function OccupancyCheck() {
                                         },
                                     }}
                                     className="mx-auto aspect-square h-40"
-                                    >
+                                >
                                     <RadialBarChart
                                         data={[{ name: 'occupied', value: overallStats.percentage, fill: "hsl(var(--primary))" }]}
                                         startAngle={90}
@@ -187,7 +187,7 @@ export function OccupancyCheck() {
                                         barSize={12}
                                     >
                                         <PolarGrid gridType="circle" radialLines={false} stroke="none" />
-                                        <RadialBar dataKey="value" background cornerRadius={10} />
+                                        <RadialBar dataKey="value" background={{ fill: 'hsl(var(--muted))' }} cornerRadius={10} />
                                         <ChartTooltip
                                             cursor={false}
                                             content={
@@ -202,15 +202,15 @@ export function OccupancyCheck() {
                                             y="50%"
                                             textAnchor="middle"
                                             dominantBaseline="middle"
-                                            className="fill-foreground text-3xl font-bold"
+                                            className="fill-foreground text-4xl font-bold"
                                         >
                                             {overallStats.percentage.toFixed(0)}%
                                         </text>
                                     </RadialBarChart>
                                 </ChartContainer>
-                                <div className="text-center">
-                                    <p className="text-4xl font-bold">{overallStats.occupied} / {overallStats.total}</p>
-                                    <p className="text-muted-foreground">rooms occupied overall</p>
+                                <div className="text-center sm:text-left">
+                                    <p className="text-5xl font-bold tracking-tighter">{overallStats.occupied} / {overallStats.total}</p>
+                                    <p className="text-muted-foreground">rooms occupied</p>
                                 </div>
                             </div>
                             <div className="w-full flex-1 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-6 border-t md:border-t-0 md:border-l md:pl-8">
@@ -235,7 +235,7 @@ export function OccupancyCheck() {
                                                     barSize={8}
                                                 >
                                                     <PolarGrid gridType="circle" radialLines={false} stroke="none" />
-                                                    <RadialBar dataKey="value" background cornerRadius={5} />
+                                                    <RadialBar dataKey="value" background={{ fill: 'hsl(var(--muted))' }} cornerRadius={5} />
                                                     <ChartTooltip
                                                         cursor={false}
                                                         content={
