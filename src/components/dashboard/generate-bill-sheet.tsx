@@ -1,3 +1,5 @@
+
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -21,8 +23,10 @@ import { differenceInCalendarDays } from 'date-fns';
 import { useRooms } from '@/context/room-context';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { Info, IndianRupee } from 'lucide-react';
+import { Info, IndianRupee, AlertTriangle } from 'lucide-react';
 import { useBilling } from '@/context/billing-context';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
+
 
 interface GenerateBillSheetProps {
   room: Room | null;
@@ -38,7 +42,7 @@ type DiscountType = 'percent' | 'amount';
 export function GenerateBillSheet({ room, serviceLog, isOpen, onClose, onMarkAsPaid, onBillToCompany }: GenerateBillSheetProps) {
   const { gstRate, serviceChargeRate, formatPrice, currency } = useSettings();
   const { corporateClients } = useBilling();
-  const { archiveStay, rooms } = useRooms();
+  const { archiveStay, rooms, forceCheckout } = useRooms();
   
   const stay = room?.stayId ? rooms.find(r => r.id === room.id)?.stays.find(s => s.stayId === room?.stayId) : undefined;
 
@@ -130,12 +134,27 @@ export function GenerateBillSheet({ room, serviceLog, isOpen, onClose, onMarkAsP
         paymentMethod: stay.isBilledToCompany ? `Billed to ${corporateClients.find(c => c.id === selectedCompany)?.name || 'Company'}` : 'Card/Cash',
     });
     
-    toast({
-        title: "Guest Checked Out",
-        description: `${stay.guestName} has been successfully checked out. Room is now pending cleaning.`
-    })
     onClose();
   }
+  
+  const handleForceCheckout = () => {
+    if (!room || !stay || !billSummary) return;
+
+    forceCheckout(room, stay, {
+        roomCharges: { label: `${room.type} (${billSummary.nights} nights)`, amount: billSummary.roomTotal },
+        serviceCharges: serviceLog,
+        subtotal: billSummary.subtotal,
+        serviceChargeAmount: billSummary.serviceChargeAmount,
+        gstAmount: billSummary.gstAmount,
+        paidAmount: billSummary.paidAmount,
+        discount: billSummary.discountAmount,
+        total: billSummary.totalWithTaxes,
+        paymentMethod: stay.isBilledToCompany ? `Billed to ${corporateClients.find(c => c.id === selectedCompany)?.name || 'Company'}` : 'Card/Cash',
+    });
+    
+    onClose();
+  }
+
 
   if (!isOpen || !room || !stay || !billSummary) return null;
 
@@ -287,6 +306,26 @@ export function GenerateBillSheet({ room, serviceLog, isOpen, onClose, onMarkAsP
             )}
             <div className="flex gap-2 w-full justify-end">
                 <Button variant="outline" onClick={onClose}>Close</Button>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" className="flex items-center gap-2">
+                            <AlertTriangle className="size-4" />
+                            Force Checkout
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This forcefully ends the stay, archives the current bill, and sets the room status to 'Cleaning'. Use this only if the standard checkout fails. This action cannot be undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleForceCheckout}>Confirm Force Checkout</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
                 <Button onClick={handleFinalCheckout} disabled={billSummary.currentBalance > 0 && !stay.isBilledToCompany}>Final Checkout</Button>
             </div>
         </SheetFooter>

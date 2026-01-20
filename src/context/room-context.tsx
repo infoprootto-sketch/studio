@@ -64,6 +64,7 @@ interface RoomActionsContextType {
   removeStay: (roomId: string, stayId: string) => Promise<void>;
   checkInStay: (roomId: string, stayId: string) => void;
   archiveStay: (room: Room, stay: Stay, finalBill: FinalBill) => Promise<void>;
+  forceCheckout: (room: Room, stay: Stay, finalBill: FinalBill) => Promise<void>;
   addCategory: (categoryData: Omit<RoomCategory, 'id'>) => void;
   updateCategory: (categoryId: string, updates: Partial<RoomCategory>) => void;
   deleteCategory: (categoryId: string) => void;
@@ -385,7 +386,7 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
   const archiveStay = useCallback(async (room: Room, stay: Stay, finalBill: FinalBill) => {
     if (!firestore || !hotelId) return;
 
-    const checkoutTimestamp = new Date(); // Use a single timestamp for consistency
+    const checkoutTimestamp = new Date(); 
 
     const roomRef = doc(firestore, 'hotels', hotelId, 'rooms', room.id);
     const historyCollectionRef = collection(firestore, 'hotels', hotelId, 'checkoutHistory');
@@ -402,8 +403,6 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
 
             const stayExists = (currentRoomData.stays || []).some(s => s.stayId === stay.stayId);
             if (!stayExists) {
-                // If the stay is already gone, it means checkout has already happened.
-                // Throw a specific error to be caught and handled gracefully.
                 throw new Error("ALREADY_CHECKED_OUT");
             }
 
@@ -445,7 +444,7 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
               roomType: room.type,
               guestName: stay.guestName,
               checkInDate: stay.checkInDate,
-              checkOutDate: checkoutTimestamp, // Use consistent timestamp
+              checkOutDate: checkoutTimestamp,
               finalBill: sanitizedBill,
             };
             
@@ -455,7 +454,7 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
               service: 'Post-Checkout Cleaning',
               status: 'Pending',
               time: 'Now',
-              creationTime: checkoutTimestamp, // Use consistent timestamp
+              creationTime: checkoutTimestamp,
               staff: 'Housekeeping',
               price: 0,
               category: 'Housekeeping Services',
@@ -480,13 +479,8 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
                 stayId: null,
                 checkInDate: null,
                 status: 'Cleaning',
-                checkOutDate: checkoutTimestamp, // Use consistent timestamp
+                checkOutDate: checkoutTimestamp,
             });
-        });
-
-        toast({
-            title: "Guest Checked Out",
-            description: `${stay.guestName} has been successfully checked out from Room ${room.number}.`
         });
 
     } catch (e: any) {
@@ -504,7 +498,111 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
             });
         }
     }
-  }, [firestore, hotelId, toast, addServiceRequests]);
+  }, [firestore, hotelId, toast]);
+
+  const forceCheckout = useCallback(async (room: Room, stay: Stay, finalBill: FinalBill) => {
+    if (!firestore || !hotelId) return;
+    
+    const checkoutTimestamp = new Date();
+    const batch = writeBatch(firestore);
+
+    const historyCollectionRef = collection(firestore, 'hotels', hotelId, 'checkoutHistory');
+    const serviceRequestCollectionRef = collection(firestore, 'hotels', hotelId, 'serviceRequests');
+    const activeStayRef = doc(firestore, 'activeStays', stay.stayId);
+    const roomRef = doc(firestore, 'hotels', hotelId, 'rooms', room.id);
+
+    // 1. Sanitize and Archive Bill
+     const sanitizedBill: FinalBill = {
+        roomCharges: {
+            label: finalBill.roomCharges?.label || 'Room Charge',
+            amount: finalBill.roomCharges?.amount ?? 0,
+        },
+        serviceCharges: (finalBill.serviceCharges || []).map(sc => ({
+            id: sc.id || `sc-${Date.now()}`,
+            stayId: sc.stayId || stay.stayId,
+            roomNumber: sc.roomNumber || room.number,
+            service: sc.service || 'Unknown Service',
+            status: sc.status || 'Completed',
+            time: sc.time || 'N/A',
+            creationTime: sc.creationTime || checkoutTimestamp,
+            completionTime: sc.completionTime || null,
+            staff: sc.staff || 'N/A',
+            assignedTo: sc.assignedTo || null,
+            createdBy: sc.createdBy || null,
+            isManualCharge: sc.isManualCharge || false,
+            price: sc.price ?? 0,
+            category: sc.category || 'Other',
+            serviceId: sc.serviceId || null,
+            quantity: sc.quantity || 1,
+        })),
+        subtotal: finalBill.subtotal ?? 0,
+        serviceChargeAmount: finalBill.serviceChargeAmount ?? 0,
+        gstAmount: finalBill.gstAmount ?? 0,
+        paidAmount: finalBill.paidAmount ?? 0,
+        discount: finalBill.discount ?? 0,
+        total: finalBill.total ?? 0,
+        paymentMethod: finalBill.paymentMethod || 'Unknown',
+    };
+    const checkedOutStay: Omit<CheckedOutStay, 'id'> = {
+      stayId: stay.stayId,
+      roomNumber: room.number,
+      roomType: room.type,
+      guestName: stay.guestName,
+      checkInDate: stay.checkInDate,
+      checkOutDate: checkoutTimestamp,
+      finalBill: sanitizedBill,
+    };
+    if (finalBill.total > 0 || (finalBill.total === 0 && stay.isBilledToCompany)) {
+        const historyDocRef = doc(historyCollectionRef);
+        batch.set(historyDocRef, checkedOutStay);
+    }
+
+    // 2. Create Cleaning Request
+    const cleaningRequestRef = doc(serviceRequestCollectionRef);
+    const cleaningRequest: Omit<ServiceRequest, 'id'> = {
+      stayId: stay.stayId,
+      roomNumber: room.number,
+      service: 'Post-Checkout Cleaning',
+      status: 'Pending',
+      time: 'Now',
+      creationTime: checkoutTimestamp,
+      staff: 'Housekeeping',
+      price: 0,
+      category: 'Housekeeping Services',
+      isManualCharge: true,
+      createdBy: 'system'
+    };
+    batch.set(cleaningRequestRef, cleaningRequest);
+
+    // 3. Delete Active Stay
+    batch.delete(activeStayRef);
+
+    // 4. Update Room
+    const newStaysArray = (room.stays || []).filter(s => s.stayId !== stay.stayId);
+    batch.update(roomRef, {
+        stays: newStaysArray,
+        guestName: null,
+        stayId: null,
+        checkInDate: null,
+        status: 'Cleaning',
+        checkOutDate: checkoutTimestamp,
+    });
+    
+    try {
+      await batch.commit();
+      toast({
+        title: "Guest Forcefully Checked Out",
+        description: `${stay.guestName} has been checked out and the room is now pending cleaning.`
+      });
+    } catch (e: any) {
+        console.error("Force checkout failed:", e);
+        toast({
+            variant: "destructive",
+            title: "Force Checkout Failed",
+            description: "A problem occurred during the force checkout. Please check the console."
+        });
+    }
+  }, [firestore, hotelId, toast]);
 
   const addCategory = useCallback((categoryData: Omit<RoomCategory, 'id'>) => {
     if (!roomCategoriesCollectionRef) return;
@@ -585,12 +683,13 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
     removeStay,
     checkInStay,
     archiveStay,
+    forceCheckout,
     addCategory,
     updateCategory,
     deleteCategory,
     openManageRoom,
     closeManageRoom
-  }), [updateRoom, addRooms, deleteRoom, addStay, addGroupBooking, updateStay, removeStay, checkInStay, archiveStay, addCategory, updateCategory, deleteCategory, openManageRoom, closeManageRoom]);
+  }), [updateRoom, addRooms, deleteRoom, addStay, addGroupBooking, updateStay, removeStay, checkInStay, archiveStay, forceCheckout, addCategory, updateCategory, deleteCategory, openManageRoom, closeManageRoom]);
 
   return (
     <RoomStateContext.Provider value={stateValue}>
