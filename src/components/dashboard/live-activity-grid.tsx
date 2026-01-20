@@ -12,7 +12,7 @@ import { differenceInCalendarDays, differenceInMinutes, isToday, isSameDay, addD
 import { useRooms } from '@/context/room-context';
 import { useSettings } from '@/context/settings-context';
 import { Input } from '@/components/ui/input';
-import { Search, DollarSign, LogOut } from 'lucide-react';
+import { Search, DollarSign, LogOut, Calendar } from 'lucide-react';
 import { ManageStaySheet } from './manage-stay-sheet';
 import { useServices } from '@/context/service-context';
 import { useBilling } from '@/context/billing-context';
@@ -20,6 +20,7 @@ import { useTeam } from '@/context/team-context';
 import { useUser } from '@/firebase';
 import { useInventory } from '@/context/inventory-context';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 
 type CartItem = {
@@ -385,73 +386,94 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
       </div>
       
       {occupiedCount > 0 ? (
-        <div className="space-y-8">
+        <Accordion type="multiple" defaultValue={["departing-today"]} className="w-full space-y-4">
             {departingToday.length > 0 && (
-                <div>
-                    <h3 className="font-semibold text-lg mb-4">Departing Today ({departingToday.length})</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {departingToday.map(room => (
-                            <LiveActivityRoomCard
-                                key={room.id}
-                                room={room}
-                                role={role}
-                                balance={getRoomBalance(room, room.stayId)}
-                                hasSlaBreach={hasSlaBreach(room.number)}
-                                onAddCharge={() => handleOpenChargeDialog(room)}
-                                onViewLog={() => handleOpenLogDialog(room)}
-                                onGenerateBill={() => handleOpenBillSheet(room)}
-                                onManageStay={() => openManageRoom(room, room.stayId)}
-                            />
-                        ))}
-                    </div>
-                </div>
+                <AccordionItem value="departing-today" className="border rounded-lg bg-card">
+                    <AccordionTrigger className="px-4 py-3 text-lg font-semibold hover:no-underline">
+                        <div className="flex items-center gap-3">
+                            <LogOut className="size-5 text-red-500" />
+                            <span>Departing Today ({departingToday.length})</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 border-t">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {departingToday.map(room => (
+                                <LiveActivityRoomCard
+                                    key={room.id}
+                                    room={room}
+                                    role={role}
+                                    balance={getRoomBalance(room, room.stayId)}
+                                    hasSlaBreach={hasSlaBreach(room.number)}
+                                    onAddCharge={() => handleOpenChargeDialog(room)}
+                                    onViewLog={() => handleOpenLogDialog(room)}
+                                    onGenerateBill={() => handleOpenBillSheet(room)}
+                                    onManageStay={() => openManageRoom(room, room.stayId)}
+                                />
+                            ))}
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
             )}
              {departingTomorrow.length > 0 && (
-                <div>
-                    <h3 className="font-semibold text-lg mb-4">Departing Tomorrow ({departingTomorrow.length})</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {departingTomorrow.map(room => (
-                             <LiveActivityRoomCard
-                                key={room.id}
-                                room={room}
-                                role={role}
-                                balance={getRoomBalance(room, room.stayId)}
-                                hasSlaBreach={hasSlaBreach(room.number)}
-                                onAddCharge={() => handleOpenChargeDialog(room)}
-                                onViewLog={() => handleOpenLogDialog(room)}
-                                onGenerateBill={() => handleOpenBillSheet(room)}
-                                onManageStay={() => openManageRoom(room, room.stayId)}
-                            />
-                        ))}
-                    </div>
-                </div>
+                <AccordionItem value="departing-tomorrow" className="border rounded-lg bg-card">
+                    <AccordionTrigger className="px-4 py-3 text-lg font-semibold hover:no-underline">
+                        <div className="flex items-center gap-3">
+                            <Calendar className="size-5 text-blue-500" />
+                            <span>Departing Tomorrow ({departingTomorrow.length})</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 border-t">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {departingTomorrow.map(room => (
+                                <LiveActivityRoomCard
+                                    key={room.id}
+                                    room={room}
+                                    role={role}
+                                    balance={getRoomBalance(room, room.stayId)}
+                                    hasSlaBreach={hasSlaBreach(room.number)}
+                                    onAddCharge={() => handleOpenChargeDialog(room)}
+                                    onViewLog={() => handleOpenLogDialog(room)}
+                                    onGenerateBill={() => handleOpenBillSheet(room)}
+                                    onManageStay={() => openManageRoom(room, room.stayId)}
+                                />
+                            ))}
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
             )}
              {departingLater.length > 0 && (
-                <div>
-                    <h3 className="font-semibold text-lg mb-4">Departing Later ({departingLater.length})</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {departingLater.map(room => (
-                             <LiveActivityRoomCard
-                                key={room.id}
-                                room={room}
-                                role={role}
-                                balance={getRoomBalance(room, room.stayId)}
-                                hasSlaBreach={hasSlaBreach(room.number)}
-                                onAddCharge={() => handleOpenChargeDialog(room)}
-                                onViewLog={() => handleOpenLogDialog(room)}
-                                onGenerateBill={() => handleOpenBillSheet(room)}
-                                onManageStay={() => openManageRoom(room, room.stayId)}
-                            />
-                        ))}
-                    </div>
-                </div>
+                <AccordionItem value="departing-later" className="border rounded-lg bg-card">
+                    <AccordionTrigger className="px-4 py-3 text-lg font-semibold hover:no-underline">
+                         <div className="flex items-center gap-3">
+                            <Calendar className="size-5 text-muted-foreground" />
+                            <span>Departing Later ({departingLater.length})</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 border-t">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {departingLater.map(room => (
+                                <LiveActivityRoomCard
+                                    key={room.id}
+                                    room={room}
+                                    role={role}
+                                    balance={getRoomBalance(room, room.stayId)}
+                                    hasSlaBreach={hasSlaBreach(room.number)}
+                                    onAddCharge={() => handleOpenChargeDialog(room)}
+                                    onViewLog={() => handleOpenLogDialog(room)}
+                                    onGenerateBill={() => handleOpenBillSheet(room)}
+                                    onManageStay={() => openManageRoom(room, room.stayId)}
+                                />
+                            ))}
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
             )}
              {filteredOccupiedCount === 0 && searchQuery && (
-                <p className="text-muted-foreground text-center col-span-full py-8">
-                    No occupied rooms found for "{searchQuery}".
-                </p>
+                <div className="text-muted-foreground text-center col-span-full py-8">
+                    <p>No occupied rooms found for "{searchQuery}".</p>
+                </div>
             )}
-        </div>
+        </Accordion>
       ) : (
         <p className="text-muted-foreground py-8">There are no occupied rooms at the moment.</p>
       )}
@@ -493,5 +515,3 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
     </>
   );
 }
-
-    
