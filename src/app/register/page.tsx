@@ -14,8 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { setDoc, doc } from 'firebase/firestore';
-import type { Hotel, HotelSettings } from '@/lib/types';
+import { setDoc, doc, collection } from 'firebase/firestore';
+import type { Hotel, HotelSettings, Department, Shift, TeamMember } from '@/lib/types';
 import { z } from 'zod';
 import { countries } from '@/lib/countries-currencies';
 import { LayoutDashboard, IndianRupee, Users } from 'lucide-react';
@@ -130,6 +130,9 @@ export default function RegisterPage() {
         location: finalData.hotelLocation,
         adminName: finalData.adminName,
         ownerUids: [user.uid],
+        status: 'Active',
+        plan: 'Boutique',
+        roomLimit: 50,
       };
 
       const hotelSettings: HotelSettings = {
@@ -147,9 +150,30 @@ export default function RegisterPage() {
 
       const hotelDocRef = doc(firestore, 'hotels', user.uid);
       const settingsDocRef = doc(firestore, 'hotels', user.uid, 'config', 'settings');
+      
+      // Also create default Department, Shift, and Team Member profile for the admin
+      const adminDeptRef = doc(collection(firestore, 'hotels', user.uid, 'departments'));
+      const generalShiftRef = doc(collection(firestore, 'hotels', user.uid, 'shifts'));
+      const adminMemberRef = doc(firestore, 'hotels', user.uid, 'teamMembers', user.uid);
+      
+      const adminDeptData: Omit<Department, 'id'> = { name: 'Admin', manages: [] };
+      const generalShiftData: Omit<Shift, 'id'> = { name: 'General', startTime: '09:00', endTime: '17:00' };
+      const adminMemberData: Omit<TeamMember, 'id'> = {
+        name: finalData.adminName,
+        email: finalData.adminEmail,
+        department: 'Admin',
+        role: 'Admin',
+        shiftId: generalShiftRef.id,
+        attendanceStatus: 'Clocked Out',
+      };
 
-      await setDoc(hotelDocRef, hotelData);
-      await setDoc(settingsDocRef, hotelSettings);
+      await Promise.all([
+        setDoc(hotelDocRef, hotelData),
+        setDoc(settingsDocRef, hotelSettings),
+        setDoc(adminDeptRef, adminDeptData),
+        setDoc(generalShiftRef, generalShiftData),
+        setDoc(adminMemberRef, adminMemberData),
+      ]);
 
       toast({
         title: 'Account Created!',

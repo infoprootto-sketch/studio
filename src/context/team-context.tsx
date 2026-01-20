@@ -77,9 +77,52 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         })) as AttendanceRecord[],
     }));
   }, [rawTeamMembers]);
+  
+  useEffect(() => {
+    const provisionOwnerProfile = async () => {
+        if (isUserLoading || !user || !firestore || !hotelId || !teamMembers || !shifts) {
+            return;
+        }
+
+        // Only provision if the current user is the hotel owner
+        if (user.uid === hotelId) {
+            const ownerInTeam = teamMembers.some(m => m.id === user.uid);
+            if (!ownerInTeam) {
+                console.log("Provisioning missing profile for hotel owner...");
+
+                const hotelDocRef = doc(firestore, 'hotels', hotelId);
+                const hotelSnap = await getDoc(hotelDocRef);
+
+                if (hotelSnap.exists()) {
+                    const hotelData = hotelSnap.data() as Hotel;
+                    const memberDocRef = doc(firestore, 'hotels', hotelId, 'teamMembers', user.uid);
+                    
+                    const defaultAdminShift = shifts.find(s => s.name.toLowerCase().includes('admin') || s.name.toLowerCase().includes('general')) || shifts[0];
+
+                    const newMemberProfile: Omit<TeamMember, 'id'> = {
+                        name: hotelData.adminName,
+                        email: user.email!,
+                        department: 'Admin',
+                        role: 'Admin',
+                        shiftId: defaultAdminShift ? defaultAdminShift.id : 'default-shift',
+                        attendanceStatus: 'Clocked Out',
+                    };
+
+                    await setDocumentNonBlocking(memberDocRef, newMemberProfile, { merge: true });
+                    toast({
+                        title: "Admin Profile Created",
+                        description: "A team member profile for you has been automatically created.",
+                    });
+                }
+            }
+        }
+    };
+    provisionOwnerProfile();
+  }, [user, isUserLoading, firestore, hotelId, teamMembers, shifts, toast]);
+
 
   const saveTeamMember = async (memberData: Partial<TeamMember>, password?: string): Promise<boolean> => {
-    if (!firestore || !hotelId) return false;
+    if (!firestore || !hotelId || !auth) return false;
     
     // Handle editing an existing member
     if (memberData.id) {
@@ -91,44 +134,41 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     // Handle new member creation
     if (!memberData.id && password && memberData.email) {
       if (!user) {
-          console.error("Admin is not logged in.");
           toast({ variant: "destructive", title: "Authentication Error", description: "Admin user not found. Please log in again." });
           return false;
       }
       
-      const adminUid = user.uid; // Capture admin's UID before auth state changes
-      const authInstance = getAuth(); // Use the main auth instance
+      const adminUid = user.uid;
 
       try {
-        const userCredential = await createUserWithEmailAndPassword(authInstance, memberData.email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, memberData.email, password);
         const newUserId = userCredential.user.uid;
         
-        const memberRef = doc(firestore, 'hotels', hotelId, 'teamMembers', newUserId);
-        const hotelRef = doc(firestore, 'hotels', hotelId);
-        
-        const newMemberData = {
-            name: memberData.name!,
-            email: memberData.email!,
-            department: memberData.department!,
-            role: memberData.role!,
-            shiftId: memberData.shiftId!,
-            attendanceStatus: 'Clocked Out' as const,
-            restaurantId: memberData.restaurantId || null,
-            createdByAdmin: adminUid, // Embed admin's UID for security rule validation
-        };
+        await runTransaction(firestore, async (transaction) => {
+            const memberRef = doc(firestore, 'hotels', hotelId, 'teamMembers', newUserId);
+            const hotelRef = doc(firestore, 'hotels', hotelId);
 
-        // The security rule now allows the new user to write this document
-        // because it's authorized by the 'createdByAdmin' field.
-        await setDoc(memberRef, newMemberData);
+            const newMemberData = {
+                name: memberData.name!,
+                email: memberData.email!,
+                department: memberData.department!,
+                role: memberData.role!,
+                shiftId: memberData.shiftId!,
+                attendanceStatus: 'Clocked Out' as const,
+                restaurantId: memberData.restaurantId || null,
+            };
 
-        // Update hotel stats in a separate, non-blocking update as the admin
-        const updates: Partial<Hotel> = { teamSize: increment(1) };
-        if (memberData.role === 'Admin') updates.adminCount = increment(1);
-        if (memberData.role === 'Manager') updates.managerCount = increment(1);
-        if (memberData.role === 'Reception') updates.receptionCount = increment(1);
-        updateDocumentNonBlocking(hotelRef, updates);
+            transaction.set(memberRef, newMemberData);
+
+            const updates: { [key: string]: any } = { teamSize: increment(1) };
+            if (memberData.role === 'Admin') updates.adminCount = increment(1);
+            if (memberData.role === 'Manager') updates.managerCount = increment(1);
+            if (memberData.role === 'Reception') updates.receptionCount = increment(1);
+            transaction.update(hotelRef, updates);
+        });
 
         return true;
+
       } catch (e: any) {
          if (e.code === 'auth/email-already-in-use') {
              toast({

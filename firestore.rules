@@ -117,7 +117,7 @@ service cloud.firestore {
     match /hotels/{hotelId}/teamMembers/{userId} {
         allow get: if isOwnerOrTeamMember(hotelId);
         allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-        allow create: if request.auth.uid == userId && request.resource.data.createdByAdmin != null && userIsHotelAdmin(hotelId, request.resource.data.createdByAdmin);
+        allow create: if isDataOwner(userId) && isHotelAdmin(hotelId);
         allow update: if isHotelAdmin(hotelId) || isDataOwner(userId);
         allow delete: if isHotelAdmin(hotelId);
     }
