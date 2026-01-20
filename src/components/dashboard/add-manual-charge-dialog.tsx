@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -342,14 +343,14 @@ export function AddManualChargeDialog({ room, isOpen, onClose, onAddCharges }: A
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-3 gap-6 overflow-hidden py-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden py-4">
           {/* Main Content: Categories or Services */}
-          <div className="col-span-2 flex flex-col">
+          <div className="lg:col-span-2 flex flex-col">
             {renderContent()}
           </div>
           
           {/* Cart Section */}
-          <div className="col-span-1 bg-muted/50 rounded-lg p-4 flex flex-col">
+          <div className="lg:col-span-1 bg-muted/50 rounded-lg p-4 flex flex-col">
             <h3 className="text-lg font-semibold mb-4">Current Order</h3>
             <ScrollArea className="flex-1 -mr-4 pr-4">
               {cart.length > 0 ? (
@@ -393,30 +394,32 @@ export function AddManualChargeDialog({ room, isOpen, onClose, onAddCharges }: A
                         <span>{formatPrice(total)}</span>
                     </div>
                 )}
-                <div>
-                  <Label className="mb-2 block">Set Request Status</Label>
-                  <RadioGroup value={requestStatus} onValueChange={(v) => setRequestStatus(v as ServiceRequestStatus)} className="flex gap-4">
-                      <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="Completed" id="status-completed" />
-                          <Label htmlFor="status-completed">Completed</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="Pending" id="status-pending" />
-                          <Label htmlFor="status-pending">Pending</Label>
-                      </div>
-                  </RadioGroup>
-                </div>
             </div>
           </div>
         </div>
         
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={cart.length === 0}>
-            Add {cart.length} item(s) to Bill
-          </Button>
+        <DialogFooter className="flex-col-reverse items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+                <Label className="font-normal text-muted-foreground">Set Status:</Label>
+                <RadioGroup value={requestStatus} onValueChange={(v) => setRequestStatus(v as ServiceRequestStatus)} className="flex gap-4">
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="Completed" id="status-completed" />
+                        <Label htmlFor="status-completed" className="font-normal">Completed</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="Pending" id="status-pending" />
+                        <Label htmlFor="status-pending" className="font-normal">Pending</Label>
+                    </div>
+                </RadioGroup>
+            </div>
+            <div className="flex gap-2 self-end sm:self-center">
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={cart.length === 0}>
+                Add {cart.length} item(s) to Bill
+              </Button>
+            </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
