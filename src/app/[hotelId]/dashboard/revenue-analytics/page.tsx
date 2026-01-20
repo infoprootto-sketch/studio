@@ -6,12 +6,12 @@ import RevenuePageContent from '@/components/dashboard/revenue-page-content';
 import AnalyticsPageContent from '@/components/dashboard/analytics-page-content';
 import { useRooms } from '@/context/room-context';
 import { useServices } from '@/context/service-context';
-import { format, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths, startOfDay, endOfDay, differenceInCalendarDays, eachDayOfInterval, isToday } from 'date-fns';
+import { format, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths, startOfDay, endOfDay, differenceInCalendarDays, eachDayOfInterval, isToday, subDays } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Download, ChevronLeft, ChevronRight, LogOut, DollarSign, Calendar as CalendarIcon } from 'lucide-react';
 import { CombinedAnalyticsReport } from '@/components/dashboard/combined-analytics-report';
 import type { ChartDataPoint } from '@/components/dashboard/revenue-chart';
-import type { RevenueAnalyticsData, ServiceAnalyticsData } from '@/components/dashboard/combined-analytics-report';
+import type { RevenueAnalyticsData, ServiceAnalyticsData, OccupancyAnalyticsData } from '@/components/dashboard/combined-analytics-report';
 import { useBilling } from '@/context/billing-context';
 import type { Room, Stay, ServiceRequest } from '@/lib/types';
 import { useSettings } from '@/context/settings-context';
@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 
 
 export default function RevenueAnalyticsPage() {
-    const { rooms, checkoutHistory } = useRooms();
+    const { rooms, roomCategories, checkoutHistory } = useRooms();
     const { serviceRequests, restaurants } = useServices();
     const { corporateClients } = useBilling();
     const { gstRate, serviceChargeRate, formatPrice } = useSettings();
@@ -110,7 +110,7 @@ export default function RevenueAnalyticsPage() {
 
 
     // Revenue Analytics Calculation
-    const revenueAnalyticsData = useMemo((): RevenueAnalyticsData => {
+    const revenueAnalyticsData: RevenueAnalyticsData = useMemo(() => {
         if (!dateRange?.from) return { totalRevenue: 0, roomRevenue: 0, serviceRevenue: 0, adr: 0, chartData: [], filterLabel };
         
         const interval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to || dateRange.from) };
@@ -151,7 +151,7 @@ export default function RevenueAnalyticsPage() {
     }, [checkoutHistory, dateRange, filterLabel, revenueFromPaidCorporateBills, corporateClients]);
 
     // Service Analytics Calculation
-    const serviceAnalyticsData = useMemo((): ServiceAnalyticsData => {
+    const serviceAnalyticsData: ServiceAnalyticsData = useMemo(() => {
          if (!dateRange?.from) return { totalServiceRevenue: 0, mostRequestedService: null, topRevenueService: null, serviceAnalytics: [], categoryAnalytics: [], filterLabel };
 
         const interval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to || dateRange.from) };
@@ -167,8 +167,8 @@ export default function RevenueAnalyticsPage() {
             const existing = analyticsMap.get(serviceName);
 
             let displayCategory = service.category || 'Other';
-            if (service.restaurantId) {
-                const restaurant = restaurants.find(r => r.id === service.restaurantId);
+            if ((service as any).restaurantId) {
+                const restaurant = restaurants.find(r => r.id === (service as any).restaurantId);
                 if (restaurant) {
                     displayCategory = restaurant.name;
                 }
@@ -205,6 +205,41 @@ export default function RevenueAnalyticsPage() {
 
         return { totalServiceRevenue, mostRequestedService, topRevenueService, serviceAnalytics, categoryAnalytics, filterLabel };
     }, [serviceRequests, checkoutHistory, dateRange, filterLabel, restaurants]);
+    
+    const occupancyAnalyticsData: OccupancyAnalyticsData = useMemo(() => {
+        if (!dateRange?.from || !rooms) return { chartData: [], filterLabel };
+        
+        const interval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to || dateRange.from) };
+        if (!interval.start || !interval.end) return { chartData: [], filterLabel };
+        
+        const daysInInterval = eachDayOfInterval(interval);
+
+        const chartData = daysInInterval.map(day => {
+            const calculationDate = startOfDay(day);
+            const totalRooms = rooms.length;
+
+            if (totalRooms === 0) {
+                return { date: format(day, 'yyyy-MM-dd'), occupancy: 0 };
+            }
+
+            const occupiedCount = rooms.filter(room => {
+                const isBooked = room.stays.some(stay => 
+                    isWithinInterval(calculationDate, { start: startOfDay(new Date(stay.checkInDate)), end: subDays(startOfDay(new Date(stay.checkOutDate)), 1) })
+                );
+                const isOutOfOrder = (room.outOfOrderBlocks || []).some(block => 
+                    isWithinInterval(calculationDate, { start: startOfDay(new Date(block.from)), end: startOfDay(new Date(block.to)) })
+                );
+                return isBooked || isOutOfOrder;
+            }).length;
+
+            const occupancyPercentage = totalRooms > 0 ? (occupiedCount / totalRooms) * 100 : 0;
+            
+            return { date: format(day, 'yyyy-MM-dd'), occupancy: occupancyPercentage };
+        });
+
+        return { chartData, filterLabel };
+    }, [dateRange, rooms, filterLabel]);
+
 
     const getRoomBalance = useMemo(() => (room: Room, stayId?: string): number => {
         if (!stayId || !rooms || !serviceRequests) return 0;
@@ -313,6 +348,7 @@ export default function RevenueAnalyticsPage() {
                 <TabsContent value="revenue">
                    <RevenuePageContent 
                         data={revenueAnalyticsData} 
+                        occupancyData={occupancyAnalyticsData}
                         todaysDepartures={todaysDepartures.length}
                         expectedRevenue={expectedRevenue}
                     />
@@ -326,6 +362,7 @@ export default function RevenueAnalyticsPage() {
                     id="printable-combined-report"
                     revenueData={revenueAnalyticsData}
                     serviceData={serviceAnalyticsData}
+                    occupancyData={occupancyAnalyticsData}
                  />
             </div>
         </div>

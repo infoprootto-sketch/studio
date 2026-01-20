@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React from 'react';
@@ -8,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DollarSign, TrendingUp, BedDouble, Zap, Star } from 'lucide-react';
 import { useSettings } from '@/context/settings-context';
 import { RevenueChart, type ChartDataPoint } from './revenue-chart';
+import { OccupancyChart } from './occupancy-chart';
 import { Logo } from '../logo';
 import { ResponsiveContainer, PieChart, Pie, Cell, Bar, BarChart, CartesianGrid, XAxis, YAxis, LabelList } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart';
@@ -20,6 +20,11 @@ export interface RevenueAnalyticsData {
     adr: number;
     chartData: ChartDataPoint[];
     filterLabel: string;
+}
+
+export interface OccupancyAnalyticsData {
+  chartData: { date: string; occupancy: number }[];
+  filterLabel: string;
 }
 
 export interface ServiceAnalyticsData {
@@ -35,20 +40,24 @@ interface CombinedAnalyticsReportProps {
   id: string;
   revenueData: RevenueAnalyticsData;
   serviceData: ServiceAnalyticsData;
+  occupancyData: OccupancyAnalyticsData;
 }
 
-export function CombinedAnalyticsReport({ id, revenueData, serviceData }: CombinedAnalyticsReportProps) {
+export function CombinedAnalyticsReport({ id, revenueData, serviceData, occupancyData }: CombinedAnalyticsReportProps) {
   const { formatPrice, legalName } = useSettings();
 
   const chartConfig: ChartConfig = React.useMemo(() => {
     const config: ChartConfig = {};
-    serviceData.categoryAnalytics.forEach(cat => {
-        config[cat.name] = { label: cat.name, color: cat.fill };
-    });
+    if (serviceData?.categoryAnalytics) {
+        serviceData.categoryAnalytics.forEach(cat => {
+            config[cat.name] = { label: cat.name, color: cat.fill };
+        });
+    }
     return config;
   }, [serviceData.categoryAnalytics]);
 
   const chartData = React.useMemo(() => {
+    if (!serviceData?.categoryAnalytics) return [];
     return [...serviceData.categoryAnalytics].sort((a, b) => b.revenue - a.revenue);
   }, [serviceData.categoryAnalytics]);
 
@@ -88,6 +97,10 @@ export function CombinedAnalyticsReport({ id, revenueData, serviceData }: Combin
             <div className="p-4 border rounded-lg">
                 <h3 className="text-lg font-semibold mb-2">Revenue Over Time</h3>
                 <div className="h-[350px] w-full"><RevenueChart data={revenueData.chartData} /></div>
+            </div>
+            <div className="p-4 border rounded-lg mt-6">
+                <h3 className="text-lg font-semibold mb-2">Occupancy Over Time</h3>
+                <div className="h-[350px] w-full"><OccupancyChart data={occupancyData.chartData} /></div>
             </div>
         </section>
 
