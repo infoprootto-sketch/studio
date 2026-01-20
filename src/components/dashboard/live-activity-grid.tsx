@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -9,7 +8,7 @@ import { AddManualChargeDialog } from './add-manual-charge-dialog';
 import { ServiceLogDialog } from './service-log-dialog';
 import { GenerateBillSheet } from './generate-bill-sheet';
 import { useToast } from '@/hooks/use-toast';
-import { differenceInCalendarDays, differenceInMinutes, isToday } from 'date-fns';
+import { differenceInCalendarDays, differenceInMinutes, isToday, isSameDay, addDays, startOfDay } from 'date-fns';
 import { useRooms } from '@/context/room-context';
 import { useSettings } from '@/context/settings-context';
 import { Input } from '@/components/ui/input';
@@ -95,14 +94,58 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
     return teamMembers.find(member => member.id === user.uid);
   }, [user, teamMembers]);
 
-
-  const occupiedRooms = useMemo(() => {
-    if (!rooms) return [];
-    const filtered = rooms.filter(room => room.status === 'Occupied' && room.stayId);
-    if (!searchQuery) {
-        return filtered;
+  const {
+    departingToday,
+    departingTomorrow,
+    departingLater,
+    occupiedCount,
+    filteredOccupiedCount
+  } = useMemo(() => {
+    if (!rooms) return { departingToday: [], departingTomorrow: [], departingLater: [], occupiedCount: 0, filteredOccupiedCount: 0 };
+    
+    let allOccupied = rooms.filter(room => room.status === 'Occupied' && room.stayId);
+    const occupiedCount = allOccupied.length;
+    
+    let filteredOccupied = allOccupied;
+    if (searchQuery) {
+        const lowercasedQuery = searchQuery.toLowerCase();
+        filteredOccupied = allOccupied.filter(room => {
+            const stay = room.stays.find(s => s.stayId === room.stayId);
+            return room.number.toLowerCase().includes(lowercasedQuery) || (stay && stay.guestName.toLowerCase().includes(lowercasedQuery));
+        });
     }
-    return filtered.filter(room => room.number.includes(searchQuery));
+    const filteredOccupiedCount = filteredOccupied.length;
+    
+    const today = startOfDay(new Date());
+    const tomorrow = startOfDay(addDays(today, 1));
+    
+    const todayRooms: Room[] = [];
+    const tomorrowRooms: Room[] = [];
+    const laterRooms: Room[] = [];
+    
+    filteredOccupied.forEach(room => {
+      const stay = room.stays.find(s => s.stayId === room.stayId);
+      if (stay?.checkOutDate) {
+        const checkOutDay = startOfDay(new Date(stay.checkOutDate));
+        if (isSameDay(checkOutDay, today)) {
+          todayRooms.push(room);
+        } else if (isSameDay(checkOutDay, tomorrow)) {
+          tomorrowRooms.push(room);
+        } else {
+          laterRooms.push(room);
+        }
+      } else {
+        laterRooms.push(room);
+      }
+    });
+
+    return {
+      departingToday: todayRooms,
+      departingTomorrow: tomorrowRooms,
+      departingLater: laterRooms,
+      occupiedCount,
+      filteredOccupiedCount,
+    };
   }, [rooms, searchQuery]);
 
   const hasSlaBreach = (roomNumber: string) => {
@@ -299,7 +342,7 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
   }, [rooms, getRoomBalance, isClient]);
 
 
-  if (occupiedRooms.length === 0 && todaysDepartures.length === 0) {
+  if (occupiedCount === 0 && todaysDepartures.length === 0) {
     return <p className="text-muted-foreground">There are no occupied rooms at the moment.</p>
   }
 
@@ -333,33 +376,86 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search by room number..."
+            placeholder="Search by room or guest name..."
             className="w-full rounded-lg bg-background pl-8"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {occupiedRooms.map(room => (
-          <LiveActivityRoomCard
-            key={room.id}
-            room={room}
-            role={role}
-            balance={getRoomBalance(room, room.stayId)}
-            hasSlaBreach={hasSlaBreach(room.number)}
-            onAddCharge={() => handleOpenChargeDialog(room)}
-            onViewLog={() => handleOpenLogDialog(room)}
-            onGenerateBill={() => handleOpenBillSheet(room)}
-            onManageStay={() => openManageRoom(room, room.stayId)}
-          />
-        ))}
-      </div>
-       {occupiedRooms.length === 0 && searchQuery && (
-        <p className="text-muted-foreground text-center col-span-full">
-            No occupied rooms found for "{searchQuery}".
-        </p>
+      
+      {occupiedCount > 0 ? (
+        <div className="space-y-8">
+            {departingToday.length > 0 && (
+                <div>
+                    <h3 className="font-semibold text-lg mb-4">Departing Today ({departingToday.length})</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {departingToday.map(room => (
+                            <LiveActivityRoomCard
+                                key={room.id}
+                                room={room}
+                                role={role}
+                                balance={getRoomBalance(room, room.stayId)}
+                                hasSlaBreach={hasSlaBreach(room.number)}
+                                onAddCharge={() => handleOpenChargeDialog(room)}
+                                onViewLog={() => handleOpenLogDialog(room)}
+                                onGenerateBill={() => handleOpenBillSheet(room)}
+                                onManageStay={() => openManageRoom(room, room.stayId)}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+             {departingTomorrow.length > 0 && (
+                <div>
+                    <h3 className="font-semibold text-lg mb-4">Departing Tomorrow ({departingTomorrow.length})</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {departingTomorrow.map(room => (
+                             <LiveActivityRoomCard
+                                key={room.id}
+                                room={room}
+                                role={role}
+                                balance={getRoomBalance(room, room.stayId)}
+                                hasSlaBreach={hasSlaBreach(room.number)}
+                                onAddCharge={() => handleOpenChargeDialog(room)}
+                                onViewLog={() => handleOpenLogDialog(room)}
+                                onGenerateBill={() => handleOpenBillSheet(room)}
+                                onManageStay={() => openManageRoom(room, room.stayId)}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+             {departingLater.length > 0 && (
+                <div>
+                    <h3 className="font-semibold text-lg mb-4">Departing Later ({departingLater.length})</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {departingLater.map(room => (
+                             <LiveActivityRoomCard
+                                key={room.id}
+                                room={room}
+                                role={role}
+                                balance={getRoomBalance(room, room.stayId)}
+                                hasSlaBreach={hasSlaBreach(room.number)}
+                                onAddCharge={() => handleOpenChargeDialog(room)}
+                                onViewLog={() => handleOpenLogDialog(room)}
+                                onGenerateBill={() => handleOpenBillSheet(room)}
+                                onManageStay={() => openManageRoom(room, room.stayId)}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+             {filteredOccupiedCount === 0 && searchQuery && (
+                <p className="text-muted-foreground text-center col-span-full py-8">
+                    No occupied rooms found for "{searchQuery}".
+                </p>
+            )}
+        </div>
+      ) : (
+        <p className="text-muted-foreground py-8">There are no occupied rooms at the moment.</p>
       )}
+
 
       <AddManualChargeDialog
         isOpen={isChargeDialogOpen}
@@ -397,3 +493,5 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
     </>
   );
 }
+
+    
