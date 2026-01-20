@@ -29,6 +29,7 @@ const departmentColors: Record<string, string> = {
     'Housekeeping': 'bg-orange-500',
     'Spa': 'bg-purple-500',
     'Gym': 'bg-pink-500',
+    'Admin': 'bg-slate-500',
 }
 
 const roleColors = {
@@ -56,6 +57,13 @@ export function TeamManagementTable({ teamMembers, departments, shifts, restaura
     setIsDialogOpen(false);
     setSelectedMember(null);
   };
+
+  const departmentOptions = useMemo(() => {
+    const allDepartments = new Set(departments.map(d => d.name));
+    allDepartments.add('Admin'); // Ensure 'Admin' is always an option
+    return Array.from(allDepartments).sort();
+  }, [departments]);
+
 
   const isAnyFilterActive = useMemo(() => {
     return searchQuery !== '' || departmentFilter !== 'All' || roleFilter !== 'All' || shiftFilter !== 'All';
@@ -94,9 +102,9 @@ export function TeamManagementTable({ teamMembers, departments, shifts, restaura
                     <SelectValue placeholder="Filter by department..." />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="All">Select Department</SelectItem>
-                    {departments.map(dept => (
-                        <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                    <SelectItem value="All">All Departments</SelectItem>
+                    {departmentOptions.map(deptName => (
+                        <SelectItem key={deptName} value={deptName}>{deptName}</SelectItem>
                     ))}
                 </SelectContent>
             </Select>
