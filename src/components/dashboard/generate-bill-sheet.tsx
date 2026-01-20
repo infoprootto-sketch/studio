@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -111,11 +109,11 @@ export function GenerateBillSheet({ room, serviceLog, isOpen, onClose, onMarkAsP
   const handleFinalCheckout = () => {
     if (!room || !stay || !billSummary) return;
 
-    if (billSummary.currentBalance > 0) {
+    if (billSummary.currentBalance > 0 && !stay.isBilledToCompany) {
       toast({
         variant: "destructive",
         title: "Outstanding Balance",
-        description: "Please clear the balance before final checkout.",
+        description: "Please clear the balance or bill to a company before final checkout.",
       });
       return;
     }
@@ -129,7 +127,7 @@ export function GenerateBillSheet({ room, serviceLog, isOpen, onClose, onMarkAsP
         paidAmount: billSummary.paidAmount,
         discount: billSummary.discountAmount,
         total: billSummary.totalWithTaxes,
-        paymentMethod: stay.isBilledToCompany ? `Billed to ${corporateClients.find(c => c.id === selectedCompany)?.name}` : 'Card/Cash',
+        paymentMethod: stay.isBilledToCompany ? `Billed to ${corporateClients.find(c => c.id === selectedCompany)?.name || 'Company'}` : 'Card/Cash',
     });
     
     toast({
@@ -281,7 +279,7 @@ export function GenerateBillSheet({ room, serviceLog, isOpen, onClose, onMarkAsP
             </div>
         </ScrollArea>
         <SheetFooter className="flex-col sm:flex-row sm:justify-between items-center pt-4">
-            {billSummary.currentBalance > 0 && (
+            {billSummary.currentBalance > 0 && !stay.isBilledToCompany && (
                 <div className="text-sm text-destructive font-semibold flex items-center gap-2">
                     <Info className="size-4" />
                     <p>Balance due before checkout.</p>
@@ -289,7 +287,7 @@ export function GenerateBillSheet({ room, serviceLog, isOpen, onClose, onMarkAsP
             )}
             <div className="flex gap-2 w-full justify-end">
                 <Button variant="outline" onClick={onClose}>Close</Button>
-                <Button onClick={handleFinalCheckout} disabled={billSummary.currentBalance > 0}>Final Checkout</Button>
+                <Button onClick={handleFinalCheckout} disabled={billSummary.currentBalance > 0 && !stay.isBilledToCompany}>Final Checkout</Button>
             </div>
         </SheetFooter>
       </SheetContent>
