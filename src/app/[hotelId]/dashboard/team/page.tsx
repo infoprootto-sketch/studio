@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -50,12 +51,6 @@ export default function TeamPage({ role = 'admin' }: { role?: 'admin' | 'manager
             toast({
                 title: memberData.id ? "Team Member Updated" : "Team Member Created",
                 description: `The details for ${memberData.name} have been processed.`,
-            });
-        } else {
-             toast({
-                variant: "destructive",
-                title: "Operation Failed",
-                description: "Could not save team member details. Please try again.",
             });
         }
     };

@@ -24,21 +24,6 @@ service cloud.firestore {
       return request.auth != null && exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid));
     }
     
-    function wasCreatedByAdmin(hotelId) {
-        let creatorUid = request.resource.data.creatorId;
-        if (creatorUid == null) { return false; }
-        
-        // Check if the creator is an owner of the hotel.
-        let creatorIsOwner = get(/databases/$(database)/documents/hotels/$(hotelId)).data.get('ownerUids', []).hasAny([creatorUid]);
-        
-        // Check if the creator has an 'Admin' role document.
-        // This get() call is permitted by the `get` rule on teamMembers, which allows an authenticated user (the new user) to read an admin's document.
-        let creatorHasAdminRole = exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(creatorUid))
-                                  && get(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(creatorUid)).data.role == 'Admin';
-                                  
-        return creatorIsOwner || creatorHasAdminRole;
-    }
-
     function isFranchiseOwner() {
         return request.auth != null && request.auth.token.isFranchiseOwner == true;
     }
@@ -126,10 +111,9 @@ service cloud.firestore {
     // --- STAFF-ONLY COLLECTIONS ---
     match /hotels/{hotelId}/checkoutHistory/{docId} { allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin(); allow create, delete: if isHotelAdmin(hotelId); allow update: if false; }
     match /hotels/{hotelId}/teamMembers/{userId} {
-        // Get rule allows any team member to read another's profile, which is needed for admin checks.
         allow get: if isTeamMember(hotelId);
         allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-        allow create: if isHotelAdmin(hotelId) || wasCreatedByAdmin(hotelId);
+        allow create: if isHotelAdmin(hotelId);
         allow update: if isHotelAdmin(hotelId) || isDataOwner(userId);
         allow delete: if isHotelAdmin(hotelId) || isDataOwner(userId);
     }

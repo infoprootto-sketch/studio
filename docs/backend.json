@@ -355,8 +355,7 @@
         "shiftId": { "type": "string" },
         "attendanceStatus": { "type": "string" },
         "lastClockIn": { "type": "string", "format": "date-time" },
-        "restaurantId": { "type": "string" },
-        "creatorId": { "type": "string" }
+        "restaurantId": { "type": "string" }
       },
       "required": ["name", "email", "department", "role", "shiftId"]
     },

@@ -9,6 +9,10 @@ import { useHotelId } from './hotel-id-context';
 import { collection, doc, writeBatch, runTransaction, getDoc, query, where, increment } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { firebaseConfig } from '@/firebase/config';
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 interface TeamContextType {
   teamMembers: TeamMember[];
@@ -42,6 +46,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const hotelId = useHotelId();
   const { user, auth, isUserLoading } = useUser();
+  const { toast } = useToast();
 
   const teamMembersCollectionRef = useMemoFirebase(() => {
     if (firestore && hotelId && user && !isUserLoading) {
@@ -85,19 +90,23 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
     // Handle new member creation
     if (!memberData.id && password && memberData.email) {
-      if (!auth || !user) {
-          console.error("Auth service is not available or admin is not logged in.");
+      if (!user) {
+          console.error("Admin is not logged in.");
+          toast({ variant: "destructive", title: "Authentication Error", description: "Admin user not found. Please log in again." });
           return false;
       }
-      const adminUid = user.uid; // Capture the UID of the admin performing the action.
+      
+      const tempApp = initializeApp(firebaseConfig, `user-creation-${Date.now()}`);
+      const tempAuth = getAuth(tempApp);
 
       try {
-        // This will sign in the new user, changing the auth context.
-        const userCredential = await createUserWithEmailAndPassword(auth, memberData.email, password);
+        const userCredential = await createUserWithEmailAndPassword(tempAuth, memberData.email, password);
         const newUserId = userCredential.user.uid;
-
+        
         const memberRef = doc(firestore, 'hotels', hotelId, 'teamMembers', newUserId);
-        const newMember = {
+        const hotelRef = doc(firestore, 'hotels', hotelId);
+        
+        const newMemberData = {
             name: memberData.name!,
             email: memberData.email!,
             department: memberData.department!,
@@ -105,22 +114,36 @@ export function TeamProvider({ children }: { children: ReactNode }) {
             shiftId: memberData.shiftId!,
             attendanceStatus: 'Clocked Out' as const,
             restaurantId: memberData.restaurantId || null,
-            creatorId: adminUid, // Embed the admin's UID for security rule validation.
         };
 
-        // Use setDoc directly. This is executed by the new user. The new security rule will permit this.
-        await setDocumentNonBlocking(memberRef, newMember, {});
-        
-        // The hotel document counts can no longer be updated here due to permissions.
-        // A background sync or periodic job is now responsible for ensuring count accuracy.
+        await runTransaction(firestore, async (transaction) => {
+            transaction.set(memberRef, newMemberData);
+            
+            const updates: Partial<Hotel> = { teamSize: increment(1) };
+            if (memberData.role === 'Admin') updates.adminCount = increment(1);
+            if (memberData.role === 'Manager') updates.managerCount = increment(1);
+            if (memberData.role === 'Reception') updates.receptionCount = increment(1);
+            transaction.update(hotelRef, updates);
+        });
 
         return true;
       } catch (e: any) {
-         console.error("New member creation failed:", e);
+         if (e.code === 'auth/email-already-in-use') {
+             toast({
+                variant: "destructive",
+                title: "Email Already In Use",
+                description: `The email ${memberData.email} is already registered. Please use a different email.`,
+             });
+         } else {
+             toast({
+                variant: "destructive",
+                title: "Creation Failed",
+                description: e.message || "Could not create team member.",
+            });
+         }
          return false;
       }
     }
-
     return false;
   };
   
