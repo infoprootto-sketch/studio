@@ -284,7 +284,12 @@
             "subcategory": {"type": "string"},
             "price": {"type": "number"},
             "description": {"type": "string"},
-            "restaurantId": {"type": "string"}
+            "restaurantId": {"type": "string"},
+            "dietaryType": {
+                "type": "string",
+                "enum": ["veg", "non-veg"],
+                "description": "The dietary type of the service, e.g., vegetarian or non-vegetarian."
+            }
         },
         "required": ["name", "category", "price"]
     },

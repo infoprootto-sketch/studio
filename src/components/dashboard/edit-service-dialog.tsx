@@ -43,6 +43,7 @@ export function EditServiceDialog({ service, isOpen, onClose, onSave, dialogType
   const [subcategory, setSubcategory] = useState('');
   const [price, setPrice] = useState<number | ''>('');
   const [discount, setDiscount] = useState<number | ''>('');
+  const [dietaryType, setDietaryType] = useState<'veg' | 'non-veg'>('veg');
   const [inventoryItemId, setInventoryItemId] = useState<string | undefined>(undefined);
   const [inventoryQuantity, setInventoryQuantity] = useState<number | ''>(1);
   const [addToInventory, setAddToInventory] = useState(false);
@@ -78,6 +79,7 @@ export function EditServiceDialog({ service, isOpen, onClose, onSave, dialogType
             setSubcategory(service.subcategory || '');
             setPrice(service.price ?? '');
             setDiscount(service.discount ?? '');
+            setDietaryType(service.dietaryType || 'veg');
             setInventoryItemId(service.inventoryItemId || undefined);
             setInventoryQuantity(service.inventoryQuantityConsumed || 1);
             setAddToInventory(false);
@@ -88,6 +90,7 @@ export function EditServiceDialog({ service, isOpen, onClose, onSave, dialogType
             setSubcategory('');
             setPrice('');
             setDiscount('');
+            setDietaryType('veg');
             setInventoryItemId(undefined);
             setInventoryQuantity(1);
             setAddToInventory(false);
@@ -113,6 +116,7 @@ export function EditServiceDialog({ service, isOpen, onClose, onSave, dialogType
         category: finalCategory, 
         subcategory,
         price: Number(price),
+        dietaryType,
     };
 
     if (discount !== '') {
@@ -248,6 +252,22 @@ export function EditServiceDialog({ service, isOpen, onClose, onSave, dialogType
                   <Input id="service-discount" type="number" value={discount} onChange={(e) => setDiscount(e.target.value === '' ? '' : Number(e.target.value))} placeholder="e.g., 10" />
               </div>
             </div>
+            
+            {dialogType === 'food' && (
+                 <div className="space-y-2">
+                    <Label>Dietary Type</Label>
+                    <div className="flex items-center space-x-2">
+                        <span className={cn('text-sm', dietaryType === 'veg' ? 'text-primary font-semibold' : 'text-muted-foreground')}>Veg</span>
+                        <Switch
+                            checked={dietaryType === 'non-veg'}
+                            onCheckedChange={(checked) => setDietaryType(checked ? 'non-veg' : 'veg')}
+                            id="dietary-type"
+                        />
+                        <span className={cn('text-sm', dietaryType === 'non-veg' ? 'text-primary font-semibold' : 'text-muted-foreground')}>Non-Veg</span>
+                    </div>
+                </div>
+            )}
+
             <div className="space-y-2 pt-4 border-t">
                 <Label>Inventory Options</Label>
                 <div className="grid grid-cols-3 gap-4">

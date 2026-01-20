@@ -23,6 +23,9 @@ import { PlusCircle, Trash2 } from 'lucide-react';
 import { useServices } from '@/context/service-context';
 import { useToast } from '@/hooks/use-toast';
 import { ReassignOrDeleteServiceCategoryDialog } from './reassign-or-delete-service-category-dialog';
+import { Switch } from '../ui/switch';
+import { Label } from '../ui/label';
+import { cn } from '@/lib/utils';
 
 interface ServiceManagementListProps {
     type: 'food' | 'other';
@@ -31,9 +34,10 @@ interface ServiceManagementListProps {
     onDelete: (serviceId: string) => void;
     onDeleteCategory: (categoryId: string) => void;
     restaurantId?: string;
+    onDietaryTypeChange: (serviceId: string, dietaryType: 'veg' | 'non-veg') => void;
 }
 
-export function ServiceManagementList({ type, services, onEdit, onDelete, onDeleteCategory, restaurantId }: ServiceManagementListProps) {
+export function ServiceManagementList({ type, services, onEdit, onDelete, onDeleteCategory, restaurantId, onDietaryTypeChange }: ServiceManagementListProps) {
   const { formatPrice } = useSettings();
   const { serviceCategories, deleteServicesByCategory, reassignServicesToCategory } = useServices();
   const { toast } = useToast();
@@ -131,6 +135,7 @@ export function ServiceManagementList({ type, services, onEdit, onDelete, onDele
             <TableHeader>
               <TableRow>
                 <TableHead>Service Name</TableHead>
+                {type === 'food' && <TableHead>Dietary Type</TableHead>}
                 <TableHead>Price</TableHead>
                 <TableHead className="w-[120px]">Discount</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -143,6 +148,19 @@ export function ServiceManagementList({ type, services, onEdit, onDelete, onDele
                     <div>{service.name}</div>
                     {service.description && <p className="text-xs text-muted-foreground">{service.description}</p>}
                   </TableCell>
+                  {type === 'food' && (
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Label htmlFor={`dietary-switch-${service.id}`} className={cn('text-xs', service.dietaryType !== 'non-veg' ? 'text-primary font-semibold' : 'text-muted-foreground')}>Veg</Label>
+                        <Switch
+                            id={`dietary-switch-${service.id}`}
+                            checked={service.dietaryType === 'non-veg'}
+                            onCheckedChange={(checked) => onDietaryTypeChange(service.id, checked ? 'non-veg' : 'veg')}
+                        />
+                        <Label htmlFor={`dietary-switch-${service.id}`} className={cn('text-xs', service.dietaryType === 'non-veg' ? 'text-primary font-semibold' : 'text-muted-foreground')}>Non-Veg</Label>
+                      </div>
+                    </TableCell>
+                  )}
                   <TableCell>{displayPrice(service.price, service.discount)}</TableCell>
                   <TableCell>
                     {service.discount ? (

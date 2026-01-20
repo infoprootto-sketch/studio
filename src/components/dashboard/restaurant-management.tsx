@@ -27,6 +27,7 @@ interface RestaurantManagementProps {
   onEditService: (service: Partial<HotelService>, type: 'food') => void;
   onDeleteService: (serviceId: string) => void;
   onAddExtractedItems: (items: HotelService[], restaurantId: string) => void;
+  onDietaryTypeChange: (serviceId: string, dietaryType: 'veg' | 'non-veg') => void;
 }
 
 export function RestaurantManagement({
@@ -38,6 +39,7 @@ export function RestaurantManagement({
   onEditService,
   onDeleteService,
   onAddExtractedItems,
+  onDietaryTypeChange,
 }: RestaurantManagementProps) {
   const [isRestaurantDialogOpen, setIsRestaurantDialogOpen] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Partial<Restaurant> | null>(null);
@@ -267,6 +269,7 @@ export function RestaurantManagement({
                     onDelete={onDeleteService}
                     restaurantId={restaurant.id}
                     onDeleteCategory={(catId) => {/* This is now handled by attemptDeleteCategory */}}
+                    onDietaryTypeChange={onDietaryTypeChange}
                   />
                 </div>
               </AccordionContent>

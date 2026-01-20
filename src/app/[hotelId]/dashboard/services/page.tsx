@@ -95,6 +95,14 @@ export default function ServicesPage() {
         });
     };
 
+    const handleDietaryTypeChange = (serviceId: string, dietaryType: 'veg' | 'non-veg') => {
+        updateHotelService(serviceId, { dietaryType });
+        toast({
+            title: 'Dietary Type Updated',
+            description: `The item has been marked as ${dietaryType === 'veg' ? 'Vegetarian' : 'Non-Vegetarian'}.`,
+        });
+    };
+
     const handleAddExtractedItems = (items: HotelService[], restaurantId: string) => {
         const newServices = items.map(item => ({
             ...item,
@@ -175,6 +183,7 @@ export default function ServicesPage() {
                                 onDeleteService={handleDeleteService}
                                 onAddExtractedItems={handleAddExtractedItems}
                                 onAddService={handleOpenServiceDialog}
+                                onDietaryTypeChange={handleDietaryTypeChange}
                              />
                         </TabsContent>
                         <TabsContent value="other" className="mt-4">
@@ -190,6 +199,7 @@ export default function ServicesPage() {
                                 onEdit={handleOpenServiceDialog}
                                 onDelete={handleDeleteService}
                                 onDeleteCategory={deleteServiceCategory}
+                                onDietaryTypeChange={handleDietaryTypeChange}
                             />
                         </TabsContent>
                     </Tabs>

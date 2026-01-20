@@ -192,7 +192,15 @@ export function InRoomDining({ restaurantId }: { restaurantId: string }) {
                                                     return (
                                                         <Card key={item.id} className="flex flex-col">
                                                             <CardContent className="p-4 flex-1">
-                                                                <h3 className="font-semibold">{item.name}</h3>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div
+                                                                        className={cn(
+                                                                            'size-3 rounded-full border-2 border-background shadow-sm',
+                                                                            item.dietaryType === 'non-veg' ? 'bg-red-600' : 'bg-green-600'
+                                                                        )}
+                                                                    />
+                                                                    <h3 className="font-semibold">{item.name}</h3>
+                                                                </div>
                                                                 {item.description && <p className="text-sm text-muted-foreground mt-1">{item.description}</p>}
                                                             </CardContent>
                                                             <CardFooter className="flex items-center justify-between p-4 pt-0">

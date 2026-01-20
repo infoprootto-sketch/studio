@@ -122,6 +122,7 @@ export interface HotelService {
   restaurantId?: string;
   inventoryItemId?: string;
   inventoryQuantityConsumed?: number;
+  dietaryType?: 'veg' | 'non-veg';
 }
 
 export type BilledOrderStatus = 'Pending' | 'Paid';
