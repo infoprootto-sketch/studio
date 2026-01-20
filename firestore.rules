@@ -12,12 +12,16 @@ service cloud.firestore {
       let isOwnerInArray = request.auth != null && get(/databases/$(database)/documents/hotels/$(hotelId)).data.get('ownerUids', []).hasAny([request.auth.uid]);
       return request.auth != null && (request.auth.uid == hotelId || isOwnerInArray);
     }
+
+    function userIsHotelAdmin(hotelId, uid) {
+      let isOwner = get(/databases/$(database)/documents/hotels/$(hotelId)).data.get('ownerUids', []).hasAny([uid]);
+      let hasAdminRole = exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(uid))
+                         && get(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(uid)).data.role == 'Admin';
+      return isOwner || hasAdminRole;
+    }
     
     function isHotelAdmin(hotelId) {
-      let isOwner = isHotelOwner(hotelId);
-      let hasAdminRole = request.auth != null && exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid))
-                         && get(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid)).data.role == 'Admin';
-      return isOwner || hasAdminRole;
+      return request.auth != null && userIsHotelAdmin(hotelId, request.auth.uid);
     }
 
     function isTeamMember(hotelId) {
@@ -101,7 +105,7 @@ service cloud.firestore {
         allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
     }
     match /hotels/{hotelId}/serviceRequests/{reqId} {
-        allow create: if isTeamMember(hotelId) || (request.auth == null && request.resource.data.stayId != null && exists(/databases/$(database)/documents/activeStays/$(request.resource.data.stayId)));
+        allow create: if isOwnerOrTeamMember(hotelId) || (request.auth == null && request.resource.data.stayId != null && exists(/databases/$(database)/documents/activeStays/$(request.resource.data.stayId)));
         allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin() || exists(/databases/$(database)/documents/activeStays/$(resource.data.stayId));
         allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
         allow update: if isOwnerOrTeamMember(hotelId);
@@ -111,11 +115,11 @@ service cloud.firestore {
     // --- STAFF-ONLY COLLECTIONS ---
     match /hotels/{hotelId}/checkoutHistory/{docId} { allow read: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin(); allow create, delete: if isHotelAdmin(hotelId); allow update: if false; }
     match /hotels/{hotelId}/teamMembers/{userId} {
-        allow get: if isTeamMember(hotelId);
+        allow get: if isOwnerOrTeamMember(hotelId);
         allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-        allow create: if isHotelAdmin(hotelId);
+        allow create: if request.auth.uid == userId && request.resource.data.createdByAdmin != null && userIsHotelAdmin(hotelId, request.resource.data.createdByAdmin);
         allow update: if isHotelAdmin(hotelId) || isDataOwner(userId);
-        allow delete: if isHotelAdmin(hotelId) || isDataOwner(userId);
+        allow delete: if isHotelAdmin(hotelId);
     }
     match /hotels/{hotelId}/departments/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }
     match /hotels/{hotelId}/shifts/{docId} { allow read: if isOwnerOrTeamMember(hotelId); allow write: if isHotelAdmin(hotelId); }

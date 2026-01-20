@@ -96,11 +96,11 @@ export function TeamProvider({ children }: { children: ReactNode }) {
           return false;
       }
       
-      const tempApp = initializeApp(firebaseConfig, `user-creation-${Date.now()}`);
-      const tempAuth = getAuth(tempApp);
+      const adminUid = user.uid; // Capture admin's UID before auth state changes
+      const authInstance = getAuth(); // Use the main auth instance
 
       try {
-        const userCredential = await createUserWithEmailAndPassword(tempAuth, memberData.email, password);
+        const userCredential = await createUserWithEmailAndPassword(authInstance, memberData.email, password);
         const newUserId = userCredential.user.uid;
         
         const memberRef = doc(firestore, 'hotels', hotelId, 'teamMembers', newUserId);
@@ -114,17 +114,19 @@ export function TeamProvider({ children }: { children: ReactNode }) {
             shiftId: memberData.shiftId!,
             attendanceStatus: 'Clocked Out' as const,
             restaurantId: memberData.restaurantId || null,
+            createdByAdmin: adminUid, // Embed admin's UID for security rule validation
         };
 
-        await runTransaction(firestore, async (transaction) => {
-            transaction.set(memberRef, newMemberData);
-            
-            const updates: Partial<Hotel> = { teamSize: increment(1) };
-            if (memberData.role === 'Admin') updates.adminCount = increment(1);
-            if (memberData.role === 'Manager') updates.managerCount = increment(1);
-            if (memberData.role === 'Reception') updates.receptionCount = increment(1);
-            transaction.update(hotelRef, updates);
-        });
+        // The security rule now allows the new user to write this document
+        // because it's authorized by the 'createdByAdmin' field.
+        await setDoc(memberRef, newMemberData);
+
+        // Update hotel stats in a separate, non-blocking update as the admin
+        const updates: Partial<Hotel> = { teamSize: increment(1) };
+        if (memberData.role === 'Admin') updates.adminCount = increment(1);
+        if (memberData.role === 'Manager') updates.managerCount = increment(1);
+        if (memberData.role === 'Reception') updates.receptionCount = increment(1);
+        updateDocumentNonBlocking(hotelRef, updates);
 
         return true;
       } catch (e: any) {

@@ -196,6 +196,7 @@ export interface TeamMember {
   lastClockIn?: Date;
   attendanceHistory?: AttendanceRecord[];
   restaurantId?: string;
+  createdByAdmin?: string;
 }
 
 export interface Department {

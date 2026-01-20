@@ -360,7 +360,8 @@
         "shiftId": { "type": "string" },
         "attendanceStatus": { "type": "string" },
         "lastClockIn": { "type": "string", "format": "date-time" },
-        "restaurantId": { "type": "string" }
+        "restaurantId": { "type": "string" },
+        "createdByAdmin": { "type": "string", "description": "The UID of the admin user who created this team member." }
       },
       "required": ["name", "email", "department", "role", "shiftId"]
     },
