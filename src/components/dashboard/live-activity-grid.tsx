@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -104,7 +103,7 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
   } = useMemo(() => {
     if (!rooms) return { departingToday: [], departingTomorrow: [], departingLater: [], occupiedCount: 0, filteredOccupiedCount: 0 };
     
-    let allOccupied = rooms.filter(room => room.status === 'Occupied' && room.stayId);
+    let allOccupied = rooms.filter(room => room.displayStatus === 'Occupied' && room.stayId);
     const occupiedCount = allOccupied.length;
     
     let filteredOccupied = allOccupied;
@@ -329,7 +328,7 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
     if (!isClient) return { todaysDepartures: [], expectedRevenue: 0 };
 
     const departures = rooms.filter(room => 
-      room.status === 'Occupied' && 
+      room.displayStatus === 'Occupied' && 
       room.stayId && 
       isToday(new Date(room.stays.find(s => s.stayId === room.stayId)?.checkOutDate || ''))
     );

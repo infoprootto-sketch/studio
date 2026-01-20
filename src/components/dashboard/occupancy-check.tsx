@@ -53,8 +53,8 @@ function calculateOccupancyStats(rooms: Room[], roomCategories: RoomCategory[], 
         }
 
         const occupiedCount = roomsInCategory.filter(room => {
-            const isOccupiedByStay = (room.stays || []).some(stay => {
-                if (!stay.checkInDate || !stay.checkOutDate) return false;
+            const isOccupiedByCheckedInStay = (room.stays || []).some(stay => {
+                if (!stay.checkInDate || !stay.checkOutDate || stay.status !== 'Checked In') return false;
                 const checkIn = startOfDay(new Date(stay.checkInDate));
                 const checkOut = startOfDay(new Date(stay.checkOutDate));
                 return isWithinInterval(calculationDate, { start: checkIn, end: subDays(checkOut, 1) });
@@ -65,7 +65,7 @@ function calculateOccupancyStats(rooms: Room[], roomCategories: RoomCategory[], 
                 return isWithinInterval(calculationDate, { start: startOfDay(new Date(block.from)), end: startOfDay(new Date(block.to)) });
             });
 
-            return isOccupiedByStay || isOutOfOrder;
+            return isOccupiedByCheckedInStay || isOutOfOrder;
         }).length;
 
         return {
