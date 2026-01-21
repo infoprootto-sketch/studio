@@ -8,7 +8,7 @@ import {
   Settings,
   Activity,
   History,
-  BarChart,
+  CalendarCheck,
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { cn } from '@/lib/utils';
@@ -23,10 +23,9 @@ export function AppSidebar() {
 
   const navItems = [
     { href: `/${hotelId}/reception/dashboard`, icon: Home, label: 'Dashboard' },
-    { href: `/${hotelId}/dashboard/live-activity`, icon: Activity, label: 'Live Activity' },
-    { href: `/${hotelId}/dashboard/team`, icon: Users, label: 'Team' },
-    { href: `/${hotelId}/dashboard/checkout-history`, icon: History, label: 'Checkout History' },
-    { href: `/${hotelId}/dashboard/revenue-analytics`, icon: LineChart, label: 'Revenue Analytics' },
+    { href: `/${hotelId}/reception/reservations`, icon: CalendarCheck, label: 'Reservations' },
+    { href: `/${hotelId}/reception/live-activity`, icon: Activity, label: 'Live Activity' },
+    { href: `/${hotelId}/reception/checkout-history`, icon: History, label: 'Checkout History' },
   ];
 
   return (
