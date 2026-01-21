@@ -57,7 +57,7 @@ export function RoomManagementTable({ roomsProp, isSuperAdminView = false }: Roo
   const [selectedRoom, setSelectedRoom] = useState<Partial<Room> | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState(''); // Default to empty string
+  const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [selectedRoomIds, setSelectedRoomIds] = useState<string[]>([]);
   
@@ -70,7 +70,7 @@ export function RoomManagementTable({ roomsProp, isSuperAdminView = false }: Roo
   const { data: hotelData } = useDoc<Hotel>(hotelDocRef);
 
   const isAnyFilterActive = useMemo(() => {
-    return searchQuery !== '' || categoryFilter !== '' || statusFilter !== 'All';
+    return searchQuery !== '' || categoryFilter !== 'All' || statusFilter !== 'All';
   }, [searchQuery, categoryFilter, statusFilter]);
 
 
@@ -80,16 +80,13 @@ export function RoomManagementTable({ roomsProp, isSuperAdminView = false }: Roo
   }, [rooms, hotelData, isSuperAdminView]);
 
   const filteredRooms = useMemo(() => {
-    if (!isAnyFilterActive) {
-      return [];
-    }
     return (rooms || []).filter(room => {
         const searchMatch = !searchQuery || room.number.toLowerCase().includes(searchQuery.toLowerCase());
-        const categoryMatch = categoryFilter === 'All' || categoryFilter === '' || room.type === categoryFilter;
+        const categoryMatch = categoryFilter === 'All' || room.type === categoryFilter;
         const statusMatch = statusFilter === 'All' || (room.displayStatus || room.status) === statusFilter;
         return searchMatch && categoryMatch && statusMatch;
     });
-  }, [rooms, searchQuery, categoryFilter, statusFilter, isAnyFilterActive]);
+  }, [rooms, searchQuery, categoryFilter, statusFilter]);
 
   useEffect(() => {
     setSelectedRoomIds([]);
@@ -310,7 +307,7 @@ export function RoomManagementTable({ roomsProp, isSuperAdminView = false }: Roo
             </div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-full sm:w-[240px]">
-                    <SelectValue placeholder="Select a category to view rooms..." />
+                    <SelectValue placeholder="Select Category" />
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="All">All Categories</SelectItem>
@@ -415,8 +412,8 @@ export function RoomManagementTable({ roomsProp, isSuperAdminView = false }: Roo
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isAnyFilterActive ? (
-                filteredRooms.length > 0 ? filteredRooms.map((room) => (
+            {filteredRooms.length > 0 ? (
+                filteredRooms.map((room) => (
                   <TableRow key={room.id} data-state={selectedRoomIds.includes(room.id) && "selected"}>
                     {!isSuperAdminView && <TableCell>
                         <Checkbox
@@ -458,17 +455,11 @@ export function RoomManagementTable({ roomsProp, isSuperAdminView = false }: Roo
                       </AlertDialog>
                     </TableCell>}
                   </TableRow>
-                )) : (
-                    <TableRow>
-                        <TableCell colSpan={isSuperAdminView ? 4 : 6} className="h-24 text-center">
-                            No rooms found for the selected filters.
-                        </TableCell>
-                    </TableRow>
-                )
+                ))
             ) : (
                  <TableRow>
                     <TableCell colSpan={isSuperAdminView ? 4 : 6} className="h-24 text-center">
-                        Please select a filter to view rooms.
+                        {isAnyFilterActive ? "No rooms found for the selected filters." : "No rooms have been created for this hotel yet. Use 'Add New Room(s)' to get started."}
                     </TableCell>
                 </TableRow>
             )}
