@@ -123,7 +123,7 @@ service cloud.firestore {
     }
 
     match /hotels/{hotelId}/teamMembers/{userId} {
-        allow get: if isOwnerOrTeamMember(hotelId);
+        allow get: if isHotelAdmin(hotelId) || isDataOwner(userId);
         allow create: if (isDataOwner(userId) && request.resource.data.createdByAdmin != null && userIsHotelAdmin(hotelId, request.resource.data.createdByAdmin)) || isHotelAdmin(hotelId);
         allow update: if isHotelAdmin(hotelId) || isDataOwner(userId);
         allow delete: if isHotelAdmin(hotelId);
