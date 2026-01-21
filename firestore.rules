@@ -77,7 +77,10 @@ service cloud.firestore {
     // ======================================================================
     
     match /hotels/{hotelId} {
-      allow read: if isHotelOwner(hotelId) || isTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      // The original `read` rule created a recursive loop.
+      // `isHotelOwner` reads this doc, but the rule for reading this doc called `isHotelOwner`.
+      // The new rule is self-contained and avoids the helper function to break the loop.
+      allow read: if (request.auth.uid == hotelId) || isTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow create: if isDataOwner(hotelId);
       allow update: if isHotelAdmin(hotelId) || isSuperAdmin();
       allow list: if isSuperAdmin() || isFranchiseOwner();
@@ -193,3 +196,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
