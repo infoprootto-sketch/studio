@@ -68,7 +68,7 @@ service cloud.firestore {
     match /hotels/{hotelId} {
       // CRITICAL FIX: The `read` rule for the hotel doc cannot call helpers that perform other reads.
       // This new rule is self-contained and breaks the loop.
-      allow read: if isHotelOwner(hotelId) ||
+      allow read: if (request.auth != null && request.auth.uid == hotelId) ||
                      (request.auth != null && exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid))) ||
                      hasDelegatedAccess(hotelId) || 
                      isSuperAdmin();
