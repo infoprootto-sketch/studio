@@ -42,7 +42,6 @@ export function AppSidebar() {
     { href: `/${hotelId}/dashboard/checkout-history`, icon: History, label: 'Checkout History' },
     { href: `/${hotelId}/dashboard/revenue-analytics`, icon: LineChart, label: 'Revenue Analytics' },
     { href: `/${hotelId}/dashboard/marketing`, icon: Megaphone, label: 'Marketing' },
-    { href: `/guest/login/${hotelId}`, icon: QrCode, label: 'Guest Portal' },
   ];
 
   return (

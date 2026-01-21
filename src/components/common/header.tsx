@@ -163,7 +163,6 @@ export function Header() {
     { href: `/${hotelId}/dashboard/billing`, icon: CreditCard, label: 'Corporate Clients' },
     { href: `/${hotelId}/dashboard/checkout-history`, icon: History, label: 'Checkout History' },
     { href: `/${hotelId}/dashboard/revenue-analytics`, icon: LineChart, label: 'Revenue Analytics' },
-    { href: '/guest/login', icon: QrCode, label: 'Guest Portal' },
     { href: `/${hotelId}/dashboard/settings`, icon: Settings, label: 'Settings' },
   ];
 
