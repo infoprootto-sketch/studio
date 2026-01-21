@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
@@ -8,10 +6,9 @@ import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebas
 import { useHotelId } from './hotel-id-context';
 import { collection, doc, writeBatch, runTransaction, getDoc, query, where, increment } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 
 interface TeamContextType {
@@ -123,7 +120,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   const saveTeamMember = async (memberData: Partial<TeamMember>, password?: string): Promise<boolean> => {
     if (!firestore || !hotelId || !auth) return false;
-    
+
     // Handle editing an existing member
     if (memberData.id) {
         const memberRef = doc(firestore, 'hotels', hotelId, 'teamMembers', memberData.id);
@@ -133,22 +130,28 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
     // Handle new member creation
     if (!memberData.id && password && memberData.email) {
-      if (!user) {
-          toast({ variant: "destructive", title: "Authentication Error", description: "Admin user not found. Please log in again." });
-          return false;
-      }
-      
-      const adminUid = user.uid;
+        if (!user) {
+            toast({ variant: "destructive", title: "Authentication Error", description: "Admin user not found. Please log in again." });
+            return false;
+        }
 
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, memberData.email, password);
-        const newUserId = userCredential.user.uid;
-        
-        await runTransaction(firestore, async (transaction) => {
+        const adminUid = user.uid;
+
+        // Use a temporary Firebase app to avoid logging out the admin
+        const tempAppName = `user-creation-${Date.now()}`;
+        const tempApp = initializeApp(firebaseConfig, tempAppName);
+        const tempAuth = getAuth(tempApp);
+
+        try {
+            const userCredential = await createUserWithEmailAndPassword(tempAuth, memberData.email, password);
+            const newUserId = userCredential.user.uid;
+
+            // Now, write the new member's profile to Firestore.
+            // This operation is performed by the admin's original authenticated session.
             const memberRef = doc(firestore, 'hotels', hotelId, 'teamMembers', newUserId);
             const hotelRef = doc(firestore, 'hotels', hotelId);
 
-            const newMemberData = {
+            const newMemberData: Omit<TeamMember, 'id'> = {
                 name: memberData.name!,
                 email: memberData.email!,
                 department: memberData.department!,
@@ -158,33 +161,36 @@ export function TeamProvider({ children }: { children: ReactNode }) {
                 restaurantId: memberData.restaurantId || null,
             };
 
-            transaction.set(memberRef, newMemberData);
+            await runTransaction(firestore, async (transaction) => {
+              transaction.set(memberRef, newMemberData);
 
-            const updates: { [key: string]: any } = { teamSize: increment(1) };
-            if (memberData.role === 'Admin') updates.adminCount = increment(1);
-            if (memberData.role === 'Manager') updates.managerCount = increment(1);
-            if (memberData.role === 'Reception') updates.receptionCount = increment(1);
-            transaction.update(hotelRef, updates);
-        });
-
-        return true;
-
-      } catch (e: any) {
-         if (e.code === 'auth/email-already-in-use') {
-             toast({
-                variant: "destructive",
-                title: "Email Already In Use",
-                description: `The email ${memberData.email} is already registered. Please use a different email.`,
-             });
-         } else {
-             toast({
-                variant: "destructive",
-                title: "Creation Failed",
-                description: e.message || "Could not create team member.",
+              const updates: { [key: string]: any } = { teamSize: increment(1) };
+              if (memberData.role === 'Admin') updates.adminCount = increment(1);
+              if (memberData.role === 'Manager') updates.managerCount = increment(1);
+              if (memberData.role === 'Reception') updates.receptionCount = increment(1);
+              transaction.update(hotelRef, updates);
             });
-         }
-         return false;
-      }
+            
+            // The temp app automatically signs in the new user, but in an isolated instance.
+            // The admin's session remains active in the main app.
+            return true;
+
+        } catch (error: any) {
+            if (error.code === 'auth/email-already-in-use') {
+                toast({
+                    variant: "destructive",
+                    title: "Email Already In Use",
+                    description: `The email ${memberData.email} is already registered.`,
+                });
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Creation Failed",
+                    description: error.message || "Could not create team member.",
+                });
+            }
+            return false;
+        }
     }
     return false;
   };
@@ -327,3 +333,5 @@ export function useTeam() {
   }
   return context;
 }
+
+    
