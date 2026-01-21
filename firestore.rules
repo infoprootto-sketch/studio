@@ -133,21 +133,21 @@ service cloud.firestore {
     }
 
     match /hotels/{hotelId}/departments/{departmentId} {
-        allow get: if isOwnerOrTeamMember(hotelId);
+        allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
         allow update, delete: if isHotelAdmin(hotelId);
         allow create: if isHotelAdmin(hotelId);
     }
     match /hotels/{hotelId}/departments {
-        allow list: if isOwnerOrTeamMember(hotelId);
+        allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
     }
 
     match /hotels/{hotelId}/shifts/{shiftId} {
-        allow get: if isOwnerOrTeamMember(hotelId);
+        allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
         allow update, delete: if isHotelAdmin(hotelId);
+        allow create: if isHotelAdmin(hotelId);
     }
     match /hotels/{hotelId}/shifts {
-        allow list: if isOwnerOrTeamMember(hotelId);
-        allow create: if isHotelAdmin(hotelId);
+        allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
     }
 
     match /hotels/{hotelId}/slaRules/{ruleId} {
@@ -155,7 +155,7 @@ service cloud.firestore {
         allow update, delete: if isHotelAdmin(hotelId);
     }
      match /hotels/{hotelId}/slaRules {
-        allow list: if isOwnerOrTeamMember(hotelId);
+        allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
         allow create: if isHotelAdmin(hotelId);
     }
 
@@ -165,16 +165,16 @@ service cloud.firestore {
       allow create: if isHotelAdmin(hotelId);
     }
      match /hotels/{hotelId}/corporateClients {
-      allow list: if isOwnerOrTeamMember(hotelId);
+      allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
     }
 
     match /hotels/{hotelId}/inventory/{itemId} {
       allow get: if isOwnerOrTeamMember(hotelId);
       allow update, delete: if isHotelAdmin(hotelId);
+      allow create: if isHotelAdmin(hotelId);
     }
     match /hotels/{hotelId}/inventory {
-      allow list: if isOwnerOrTeamMember(hotelId);
-      allow create: if isHotelAdmin(hotelId);
+      allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
     }
 
     match /hotels/{hotelId}/stockMovements/{movementId} {
@@ -183,17 +183,17 @@ service cloud.firestore {
       allow update: if false; 
     }
     match /hotels/{hotelId}/stockMovements {
-      allow list: if isOwnerOrTeamMember(hotelId);
+      allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow create: if isOwnerOrTeamMember(hotelId);
     }
 
     match /hotels/{hotelId}/vendors/{vendorId} {
       allow get: if isOwnerOrTeamMember(hotelId);
       allow update, delete: if isHotelAdmin(hotelId);
+      allow create: if isHotelAdmin(hotelId);
     }
     match /hotels/{hotelId}/vendors {
-      allow list: if isOwnerOrTeamMember(hotelId);
-      allow create: if isHotelAdmin(hotelId);
+      allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
     }
   }
 }
