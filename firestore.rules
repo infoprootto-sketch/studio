@@ -135,10 +135,10 @@ service cloud.firestore {
     match /hotels/{hotelId}/departments/{departmentId} {
         allow get: if isOwnerOrTeamMember(hotelId);
         allow update, delete: if isHotelAdmin(hotelId);
+        allow create: if isHotelAdmin(hotelId);
     }
     match /hotels/{hotelId}/departments {
         allow list: if isOwnerOrTeamMember(hotelId);
-        allow create: if isHotelAdmin(hotelId);
     }
 
     match /hotels/{hotelId}/shifts/{shiftId} {
@@ -162,10 +162,10 @@ service cloud.firestore {
     match /hotels/{hotelId}/corporateClients/{clientId} {
       allow get: if isOwnerOrTeamMember(hotelId);
       allow update, delete: if isHotelAdmin(hotelId);
+      allow create: if isHotelAdmin(hotelId);
     }
      match /hotels/{hotelId}/corporateClients {
       allow list: if isOwnerOrTeamMember(hotelId);
-      allow create: if isHotelAdmin(hotelId);
     }
 
     match /hotels/{hotelId}/inventory/{itemId} {
