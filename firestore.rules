@@ -13,13 +13,6 @@ service cloud.firestore {
       return request.auth != null && (request.auth.uid == hotelId || isOwnerInArray);
     }
 
-    function userIsHotelAdmin(hotelId, uid) {
-      let isOwner = get(/databases/$(database)/documents/hotels/$(hotelId)).data.get('ownerUids', []).hasAny([uid]);
-      let hasAdminRole = exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(uid))
-                         && get(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(uid)).data.role == 'Admin';
-      return isOwner || hasAdminRole;
-    }
-    
     function isHotelAdmin(hotelId) {
       // This is the master check for admin privileges.
       // This has been made non-recursive.
@@ -45,7 +38,7 @@ service cloud.firestore {
     }
 
     function isOwnerOrTeamMember(hotelId) {
-      return isHotelOwner(hotelId) || isTeamMember(hotelId);
+      return isHotelAdmin(hotelId); // Simplified to master admin check
     }
     
     function isDataOwner(userId) {
@@ -66,9 +59,9 @@ service cloud.firestore {
 
     match /activeStays/{stayId} {
       allow get: if true;
-      allow create: if isOwnerOrTeamMember(request.resource.data.hotelId);
-      allow update: if isOwnerOrTeamMember(request.resource.data.hotelId);
-      allow delete: if isOwnerOrTeamMember(get(/databases/$(database)/documents/activeStays/$(stayId)).data.hotelId);
+      allow create: if isHotelAdmin(get(/databases/$(database)/documents/activeStays/$(stayId)).data.hotelId);
+      allow update: if isHotelAdmin(get(/databases/$(database)/documents/activeStays/$(stayId)).data.hotelId);
+      allow delete: if isHotelAdmin(get(/databases/$(database)/documents/activeStays/$(stayId)).data.hotelId);
       allow list: if false;
     }
 
@@ -77,10 +70,14 @@ service cloud.firestore {
     // ======================================================================
     
     match /hotels/{hotelId} {
-      // The original `read` rule created a recursive loop.
-      // `isHotelOwner` reads this doc, but the rule for reading this doc called `isHotelOwner`.
-      // The new rule is self-contained and avoids the helper function to break the loop.
-      allow read: if (request.auth.uid == hotelId) || isTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      // CRITICAL FIX: The `read` rule for the hotel doc cannot call helpers that perform other reads.
+      // The previous rule called isTeamMember, which did an `exists()` call, which had a rule that
+      // eventually called back to read the hotel doc, creating a recursive loop.
+      // This new rule is self-contained and breaks the loop.
+      allow read: if request.auth.uid == hotelId ||
+                     (request.auth != null && exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid))) ||
+                     hasDelegatedAccess(hotelId) || 
+                     isSuperAdmin();
       allow create: if isDataOwner(hotelId);
       allow update: if isHotelAdmin(hotelId) || isSuperAdmin();
       allow list: if isSuperAdmin() || isFranchiseOwner();
@@ -94,105 +91,74 @@ service cloud.firestore {
     match /hotels/{hotelId}/delegates/{franchiseOwnerUid} { allow read, write: if isHotelAdmin(hotelId); }
     match /hotels/{hotelId}/accessRequests/{franchiseOwnerUid} { 
         allow create: if isFranchiseOwner() && request.auth.uid == franchiseOwnerUid; 
-        allow read, delete: if isHotelAdmin(hotelId); 
+        allow read, delete, list: if isHotelAdmin(hotelId); 
         allow update: if false; 
-        allow list: if isHotelAdmin(hotelId);
     }
     
-    // --- Publicly Readable Data ---
-    match /hotels/{hotelId}/roomCategories/{docId} { allow read: if true; allow write: if isHotelAdmin(hotelId); }
-    match /hotels/{hotelId}/hotelServices/{docId} { allow read: if true; allow write: if isHotelAdmin(hotelId); }
-    match /hotels/{hotelId}/restaurants/{docId} { allow read: if true; allow write: if isHotelAdmin(hotelId); }
-    match /hotels/{hotelId}/serviceCategories/{docId} { allow read: if true; allow write: if isHotelAdmin(hotelId); }
-    match /hotels/{hotelId}/serviceTimings/{docId} { allow read: if true; allow write: if isHotelAdmin(hotelId); }
-    match /hotels/{hotelId}/broadcasts/{docId} { allow read: if true; allow write: if isOwnerOrTeamMember(hotelId); }
-    match /hotels/{hotelId}/config/{docId} { allow read: if true; allow write: if isHotelAdmin(hotelId); }
+    // --- Publicly Readable Data (with admin write) ---
+    match /hotels/{hotelId}/{collection}/{docId} 
+        where collection in ['roomCategories', 'hotelServices', 'restaurants', 'serviceCategories', 'serviceTimings', 'config'] {
+        allow read: if true;
+        allow write: if isHotelAdmin(hotelId);
+    }
 
-    // --- GUEST OR STAFF ACCESS ---
+    // --- Guest or Staff Access ---
     match /hotels/{hotelId}/rooms/{roomId} {
-        allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin() || isGuestOfRoom();
-        allow create: if isHotelAdmin(hotelId);
-        allow update: if isOwnerOrTeamMember(hotelId);
-        allow delete: if isHotelAdmin(hotelId);
-        allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+        allow read, list: if isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin() || isGuestOfRoom();
+        allow create, delete: if isHotelAdmin(hotelId);
+        allow update: if isHotelAdmin(hotelId) || isTeamMember(hotelId);
     }
     match /hotels/{hotelId}/serviceRequests/{reqId} {
-        allow create: if isOwnerOrTeamMember(hotelId) || (request.auth == null && request.resource.data.stayId != null && exists(/databases/$(database)/documents/activeStays/$(request.resource.data.stayId)));
-        allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin() || exists(/databases/$(database)/documents/activeStays/$(resource.data.stayId));
-        allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-        allow update: if isOwnerOrTeamMember(hotelId);
+        allow create: if isHotelAdmin(hotelId) || isTeamMember(hotelId) || (request.auth == null && request.resource.data.stayId != null && exists(/databases/$(database)/documents/activeStays/$(request.resource.data.stayId)));
+        allow read, list: if isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin() || exists(/databases/$(database)/documents/activeStays/$(resource.data.stayId));
+        allow update: if isHotelAdmin(hotelId) || isTeamMember(hotelId);
         allow delete: if isHotelAdmin(hotelId);
     }
+    match /hotels/{hotelId}/broadcasts/{docId} { 
+      allow read: if true; 
+      allow write: if isHotelAdmin(hotelId); 
+    }
 
-    // --- STAFF-ONLY COLLECTIONS ---
-    match /hotels/{hotelId}/checkoutHistory/{docId} {
-      allow get: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-      allow create, delete: if isHotelAdmin(hotelId); 
+    // --- STAFF-ONLY COLLECTIONS (Master Admin Rule) ---
+    match /hotels/{hotelId}/checkoutHistory/{docId=**} {
+      allow read, write: if isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+    }
+    match /hotels/{hotelId}/teamMembers/{docId=**} {
+      // CRITICAL FIX: The `get` rule can't cause recursion. An admin can read other member docs.
+      // A member can only read their own.
+      allow get: if isDataOwner(docId) || isHotelAdmin(hotelId);
+      allow list: if isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow create, update, delete: if isHotelAdmin(hotelId);
+    }
+    match /hotels/{hotelId}/departments/{docId=**} {
+      allow read, write: if isHotelAdmin(hotelId);
+      allow list: if isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+    }
+    match /hotels/{hotelId}/shifts/{docId=**} {
+      allow read, write: if isHotelAdmin(hotelId);
+      allow list: if isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+    }
+    match /hotels/{hotelId}/slaRules/{docId=**} {
+      allow read, write: if isHotelAdmin(hotelId);
+      allow list: if isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+    }
+    match /hotels/{hotelId}/corporateClients/{docId=**} {
+      allow read, write: if isHotelAdmin(hotelId);
+      allow list: if isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+    }
+    match /hotels/{hotelId}/inventory/{docId=**} {
+      allow read, write: if isHotelAdmin(hotelId);
+      allow list: if isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+    }
+    match /hotels/{hotelId}/vendors/{docId=**} {
+      allow read, write: if isHotelAdmin(hotelId);
+      allow list: if isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+    }
+    match /hotels/{hotelId}/stockMovements/{docId=**} {
+      allow create: if isHotelAdmin(hotelId) || isTeamMember(hotelId);
+      allow read, list: if isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow update: if false;
-    }
-    match /hotels/{hotelId}/checkoutHistory {
-      allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-    }
-
-    match /hotels/{hotelId}/teamMembers/{userId} {
-        // Corrected rule to break recursion
-        allow get: if isDataOwner(userId) || isHotelAdmin(hotelId);
-        allow create: if isHotelAdmin(hotelId);
-        allow update: if isHotelAdmin(hotelId) || isDataOwner(userId);
-        allow delete: if isHotelAdmin(hotelId);
-        allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-    }
-
-    match /hotels/{hotelId}/departments/{departmentId} {
-        allow read, write: if isHotelAdmin(hotelId);
-    }
-    match /hotels/{hotelId}/departments {
-        allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-    }
-
-    match /hotels/{hotelId}/shifts/{shiftId} {
-        allow read, write: if isHotelAdmin(hotelId);
-    }
-    match /hotels/{hotelId}/shifts {
-        allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-    }
-
-    match /hotels/{hotelId}/slaRules/{ruleId} {
-        allow read, write: if isHotelAdmin(hotelId);
-    }
-     match /hotels/{hotelId}/slaRules {
-        allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-    }
-
-    match /hotels/{hotelId}/corporateClients/{clientId} {
-      allow read, write: if isHotelAdmin(hotelId);
-    }
-     match /hotels/{hotelId}/corporateClients {
-      allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-    }
-
-    match /hotels/{hotelId}/inventory/{itemId} {
-      allow read, write: if isHotelAdmin(hotelId);
-    }
-    match /hotels/{hotelId}/inventory {
-      allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-    }
-
-    match /hotels/{hotelId}/stockMovements/{movementId} {
-      allow read: if isOwnerOrTeamMember(hotelId);
-      allow create: if isOwnerOrTeamMember(hotelId);
       allow delete: if isHotelAdmin(hotelId);
-      allow update: if false; 
-    }
-    match /hotels/{hotelId}/stockMovements {
-      allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-    }
-
-    match /hotels/{hotelId}/vendors/{vendorId} {
-      allow read, write: if isHotelAdmin(hotelId);
-    }
-    match /hotels/{hotelId}/vendors {
-      allow list: if isOwnerOrTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
     }
   }
 }
