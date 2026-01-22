@@ -9,15 +9,14 @@ service cloud.firestore {
     // ======================================================================
     
     function isHotelOwner(hotelId) {
-      let isOwnerInArray = request.auth != null && get(/databases/$(database)/documents/hotels/$(hotelId)).data.get('ownerUids', []).hasAny([request.auth.uid]);
+      // This rule is now self-contained and doesn't rely on other rules.
+      let hotelData = get(/databases/$(database)/documents/hotels/$(hotelId)).data;
+      let isOwnerInArray = request.auth != null && hotelData.get('ownerUids', []).hasAny([request.auth.uid]);
       return request.auth != null && (request.auth.uid == hotelId || isOwnerInArray);
     }
 
     function isHotelAdmin(hotelId) {
-      // This is the master check for admin privileges.
-      // This has been made non-recursive.
       let isOwner = isHotelOwner(hotelId);
-      // To check if the requestor has an admin role, we read *their own* document.
       // This is safe because the rule for /teamMembers/{userId} get allows isDataOwner(userId).
       let hasAdminRole = request.auth != null &&
                          exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid)) &&
@@ -67,8 +66,8 @@ service cloud.firestore {
     
     match /hotels/{hotelId} {
       // CRITICAL FIX: The `read` rule for the hotel doc cannot call helpers that perform other reads.
-      // This new rule is self-contained and breaks the loop.
-      allow read: if (request.auth != null && request.auth.uid == hotelId) ||
+      // This new rule is self-contained and breaks the loop. It checks for direct ownership, team membership, or delegated access.
+      allow read: if (request.auth != null && (request.auth.uid == hotelId || get(/databases/$(database)/documents/hotels/$(hotelId)).data.get('ownerUids', []).hasAny([request.auth.uid]))) ||
                      (request.auth != null && exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid))) ||
                      hasDelegatedAccess(hotelId) || 
                      isSuperAdmin();
