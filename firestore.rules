@@ -1,179 +1,115 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
   
     // ======================================================================
-    // START: NEW, GRANULAR HELPER FUNCTIONS
+    // HELPER FUNCTIONS
     // ======================================================================
 
-    function isHotelOwner(hotelId) {
-      // Is the requesting user the primary owner of the hotel document?
-      return request.auth != null && request.auth.uid == hotelId;
-    }
+    function isAuth() { return request.auth != null; }
+    function authedUid() { return request.auth.uid; }
 
-    function isTeamMember(hotelId) {
-      // Does the user exist in this hotel's teamMembers subcollection?
-      return request.auth != null && exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid));
+    function isSuperAdmin() { return isAuth() && request.auth.token.isSuperAdmin == true; }
+    function isFranchiseOwner() { return isAuth() && request.auth.token.isFranchiseOwner == true; }
+    
+    // Reads the main hotel document to check if the user is in the ownerUids list.
+    function isListedOwner(hotelId) {
+      return isAuth() && authedUid() in get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerUids;
     }
     
+    // Checks the 'role' field from the user's team member document.
     function getUserRole(hotelId) {
-      // Gets the role string from the user's teamMember document.
-      return get(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid)).data.role;
-    }
-
-    function isTeamOwner(hotelId) {
-      return isTeamMember(hotelId) && getUserRole(hotelId) == 'Owner';
-    }
-
-    function isTeamAdmin(hotelId) {
-      return isTeamMember(hotelId) && getUserRole(hotelId) == 'Admin';
+        return get(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(authedUid())).data.role;
     }
     
-    function isTeamManager(hotelId) {
-      return isTeamMember(hotelId) && getUserRole(hotelId) == 'Manager';
+    function hasTeamRole(hotelId, role) {
+      return exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(authedUid())) && getUserRole(hotelId) == role;
     }
     
-    function isTeamReception(hotelId) {
-      return isTeamMember(hotelId) && getUserRole(hotelId) == 'Reception';
+    function canViewFinancials(hotelId) {
+       return isListedOwner(hotelId) || hasTeamRole(hotelId, 'Admin') || hasTeamRole(hotelId, 'Owner') || hasDelegatedAccess(hotelId) || isSuperAdmin();
     }
-
-    // This is the new gatekeeper for high-level permissions.
-    function isHotelAdminOrOwner(hotelId) {
-      return isHotelOwner(hotelId) || isTeamOwner(hotelId) || isTeamAdmin(hotelId);
+    
+    function isHotelStaff(hotelId) {
+       return exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(authedUid()));
     }
-
-    // --- SUPER ADMIN & FRANCHISE OWNER HELPERS (Unchanged) ---
-    function isSuperAdmin() {
-      return request.auth != null && request.auth.token.isSuperAdmin == true;
-    }
-
-    function isFranchiseOwner() {
-        return request.auth != null && request.auth.token.isFranchiseOwner == true;
-    }
-
+    
     function hasDelegatedAccess(hotelId) {
-        return isFranchiseOwner() && exists(/databases/$(database)/documents/hotels/$(hotelId)/delegates/$(request.auth.uid));
+        return isFranchiseOwner() && exists(/databases/$(database)/documents/hotels/$(hotelId)/delegates/$(authedUid()));
     }
     
-    // --- GUEST HELPER (Unchanged) ---
     function isGuestOfStay(stayId) {
         return stayId != null && exists(/databases/$(database)/documents/activeStays/$(stayId));
     }
 
     // ======================================================================
-    // END: NEW HELPER FUNCTIONS
+    // RULES
     // ======================================================================
 
-    // Publicly readable, admin-writable document for active stays.
-    match /activeStays/{stayId} {
-      allow get: if true;
-      // An active stay can be created by an admin or the hotel owner during check-in.
-      allow write: if isHotelAdminOrOwner(getAfter(/databases/$(database)/documents/activeStays/$(stayId)).data.hotelId);
-      allow list: if false; // Never allow listing all active stays.
-    }
-
-    // --- CORE HOTEL DOCUMENT RULE ---
     match /hotels/{hotelId} {
-      // Any team member can read their hotel's main document.
-      allow read: if isTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-      // Only the primary owner can create the hotel document.
-      allow create: if isHotelOwner(hotelId);
-      // Only Admin, Owner, or SuperAdmin can update hotel-level details.
-      allow update: if isHotelAdminOrOwner(hotelId) || isSuperAdmin();
-      // Only special roles can list all hotels.
+      allow read: if isHotelStaff(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow create: if isAuth() && authedUid() == hotelId;
+      allow update: if isListedOwner(hotelId) || isSuperAdmin();
       allow list: if isFranchiseOwner() || isSuperAdmin();
     }
-
-    // --- TEAM MEMBERS SUBCOLLECTION ---
+    
     match /hotels/{hotelId}/teamMembers/{memberId} {
-      // Any team member can view another's basic profile.
-      allow get, list: if isTeamMember(hotelId);
-      // Only Admins/Owners can add, edit, or remove team members.
-      allow create, update, delete: if isHotelAdminOrOwner(hotelId);
-    }
-    
-    // --- PUBLICLY READABLE CONFIGURATION DATA ---
-    // Guests need to read these to use the app. Write access is restricted.
-    match /hotels/{hotelId}/{collection}/{docId} 
-        where collection in ['roomCategories', 'hotelServices', 'restaurants', 'serviceCategories', 'serviceTimings', 'config', 'broadcasts'] {
-        allow read: if true;
-        allow write: if isHotelAdminOrOwner(hotelId);
+      allow get: if (isAuth() && authedUid() == memberId) || isListedOwner(hotelId) || hasTeamRole(hotelId, 'Admin');
+      allow list: if isHotelStaff(hotelId);
+      allow write: if isListedOwner(hotelId) || hasTeamRole(hotelId, 'Admin');
     }
 
-    // --- SENSITIVE FINANCIAL HISTORY ---
-    // Restricted to Owners, Admins, and delegated viewers. No regular staff access.
     match /hotels/{hotelId}/checkoutHistory/{docId} {
-      allow read, list: if (request.auth != null && request.auth.uid == hotelId) || isTeamOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-      allow write: if isHotelAdminOrOwner(hotelId);
-    }
-    match /hotels/{hotelId}/corporateClients/{docId} {
-      allow read, list: if (request.auth != null && request.auth.uid == hotelId) || isTeamOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-      allow write: if isHotelAdminOrOwner(hotelId);
-    }
-    
-    // --- OPERATIONAL STAFF-ONLY COLLECTIONS ---
-    // Managed by Admins/Owners.
-    match /hotels/{hotelId}/departments/{docId} {
-      allow read, list: if isTeamMember(hotelId);
-      allow write: if isHotelAdminOrOwner(hotelId);
-    }
-    match /hotels/{hotelId}/shifts/{docId} {
-      allow read, list: if isTeamMember(hotelId);
-      allow write: if isHotelAdminOrOwner(hotelId);
-    }
-    match /hotels/{hotelId}/slaRules/{ruleId} {
-      allow read, list: if isTeamMember(hotelId);
-      allow write: if isHotelAdminOrOwner(hotelId);
+      allow read, list: if canViewFinancials(hotelId);
+      allow write: if isListedOwner(hotelId) || hasTeamRole(hotelId, 'Admin');
     }
 
-    // --- INVENTORY MANAGEMENT ---
-    match /hotels/{hotelId}/inventory/{docId} {
-      allow read, list: if isTeamMember(hotelId);
-      allow write: if isHotelAdminOrOwner(hotelId);
-    }
-    match /hotels/{hotelId}/vendors/{vendorId} {
-      allow read, list: if isTeamMember(hotelId);
-      allow write: if isHotelAdminOrOwner(hotelId);
-    }
-     match /hotels/{hotelId}/stockMovements/{movementId} {
-        allow read, list: if isTeamMember(hotelId);
-        allow create, update, delete: if isTeamMember(hotelId);
+    match /hotels/{hotelId}/corporateClients/{docId} {
+      allow read, list: if canViewFinancials(hotelId);
+      allow write: if isListedOwner(hotelId) || hasTeamRole(hotelId, 'Admin');
     }
     
-    // --- GUEST & STAFF SHARED COLLECTIONS ---
+    match /hotels/{hotelId}/{collection}/{docId} where collection in ['inventory', 'vendors', 'stockMovements', 'departments', 'shifts', 'slaRules'] {
+      allow read, list: if isHotelStaff(hotelId);
+      allow write: if isListedOwner(hotelId) || hasTeamRole(hotelId, 'Admin');
+    }
+
+    match /hotels/{hotelId}/{collection}/{docId} where collection in ['roomCategories', 'restaurants', 'serviceCategories', 'serviceTimings', 'config', 'broadcasts', 'hotelServices'] {
+        allow read: if true;
+        allow write: if isListedOwner(hotelId) || hasTeamRole(hotelId, 'Admin');
+    }
+
+    match /activeStays/{stayId} {
+      allow get: if true;
+      allow write: if isListedOwner(getAfter(/databases/$(database)/documents/activeStays/$(stayId)).data.hotelId) || hasTeamRole(getAfter(/databases/$(database)/documents/activeStays/$(stayId)).data.hotelId, 'Admin');
+      allow list: if false;
+    }
+
     match /hotels/{hotelId}/rooms/{roomId} {
-        // Any team member can see the list of rooms.
-        allow list: if isTeamMember(hotelId);
-        // Team members and the currently checked-in guest can see a specific room.
-        allow get: if isTeamMember(hotelId) || isGuestOfStay(resource.data.stayId);
-        // Only Admins/Owners can add or delete rooms.
-        allow create, delete: if isHotelAdminOrOwner(hotelId);
-        // Any team member can update a room's status (e.g., 'Cleaning' -> 'Available').
-        allow update: if isTeamMember(hotelId);
+        allow list: if isHotelStaff(hotelId);
+        allow get: if isHotelStaff(hotelId) || isGuestOfStay(resource.data.stayId);
+        allow create, delete: if isListedOwner(hotelId) || hasTeamRole(hotelId, 'Admin');
+        allow update: if isHotelStaff(hotelId);
     }
 
     match /hotels/{hotelId}/serviceRequests/{reqId} {
-        // Team members or the guest of the stay can create requests.
-        allow create: if isTeamMember(hotelId) || isGuestOfStay(request.resource.data.stayId);
-        // Team members or the guest can view their own requests.
-        allow get: if isTeamMember(hotelId) || isGuestOfStay(resource.data.stayId);
-        // Team members can list all requests. Guests can only list their own.
-        allow list: if isTeamMember(hotelId) || (isGuestOfStay(request.query.where[2]) && request.query.where[0] == 'stayId');
-        // Any team member can update or delete a request.
-        allow update, delete: if isTeamMember(hotelId);
+        allow create: if isHotelStaff(hotelId) || isGuestOfStay(request.resource.data.stayId);
+        allow get: if isHotelStaff(hotelId) || isGuestOfStay(resource.data.stayId);
+        allow list: if isHotelStaff(hotelId) || (isGuestOfStay(request.query.where[2]) && request.query.where[0] == 'stayId');
+        allow update, delete: if isHotelStaff(hotelId);
     }
     
-    // --- DELEGATION & ACCESS REQUESTS ---
     match /hotels/{hotelId}/accessRequests/{franchiseOwnerUid} { 
-        allow create: if isFranchiseOwner() && request.auth.uid == franchiseOwnerUid; 
-        allow read, list, delete: if isHotelAdminOrOwner(hotelId);
+        allow create: if isFranchiseOwner() && authedUid() == franchiseOwnerUid; 
+        allow read, list, delete: if isListedOwner(hotelId) || hasTeamRole(hotelId, 'Admin');
         allow update: if false; 
     }
 
     match /hotels/{hotelId}/delegates/{franchiseOwnerUid} {
-      allow read: if isHotelAdminOrOwner(hotelId) || isFranchiseOwner();
-      allow write: if isHotelAdminOrOwner(hotelId);
+      allow read: if isListedOwner(hotelId) || hasTeamRole(hotelId, 'Admin') || isFranchiseOwner();
+      allow write: if isListedOwner(hotelId) || hasTeamRole(hotelId, 'Admin');
     }
   }
 }
