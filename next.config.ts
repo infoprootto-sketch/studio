@@ -1,5 +1,9 @@
+
 const nextConfig = {
   /* config options here */
+  experimental: {
+    allowedDevOrigins: ["https://*.cloudworkstations.dev"],
+  },
   images: {
     remotePatterns: [
       {
@@ -24,4 +28,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;
