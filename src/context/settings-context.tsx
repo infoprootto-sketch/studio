@@ -1,12 +1,10 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
 import { countries, type Country, type Currency, type Language } from '@/lib/countries-currencies';
-import { useFirestore, useDoc, useMemoFirebase, useUser } from '@/firebase';
+import { useFirestore, useDoc, useMemoFirebase, useUser, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { useHotelId } from './hotel-id-context';
-import { doc } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { doc, updateDoc } from 'firebase/firestore';
 
 interface HotelSettingsData {
   country?: string;
@@ -88,7 +86,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const saveSettings = (updates: Partial<HotelSettingsData>) => {
     if (!settingsDocRef) return;
-    updateDocumentNonBlocking(settingsDocRef, updates);
+    updateDoc(settingsDocRef, updates).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: settingsDocRef.path,
+          operation: 'update',
+          requestResourceData: updates,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
   
   const getCountryData = (countryCode: string) => {
