@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "deploy": "firebase deploy --only hosting --project staycentralv2-67504826-2d582"
+    "deploy": "firebase deploy --only hosting",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",

@@ -6,7 +6,19 @@ This guide provides the exact commands to push your latest updates to a Git repo
 
 ---
 
-### Step 1: Add Your Remote Repository
+### Step 1: Set Your Target Firebase Project
+
+Before you can deploy, you need to tell the Firebase CLI which project you want to deploy to. You only need to do this once, or whenever you want to switch projects.
+
+```bash
+# IMPORTANT: Replace <YOUR_PROJECT_ID> with your Firebase Project ID
+firebase use <YOUR_PROJECT_ID>
+```
+You can find your project ID in your Firebase Console settings.
+
+---
+
+### Step 2: Add Your Remote Repository
 
 You need to tell Git where to push your code. You only need to do this once.
 
@@ -19,7 +31,7 @@ git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
 
 ---
 
-### Step 2: Stage, Commit, and Force Push Your Changes
+### Step 3: Stage, Commit, and Force Push Your Changes
 
 Because your local repository history may be out of sync, we will use a "force push". This will overwrite the history on the remote repository with your current local code.
 
@@ -44,9 +56,9 @@ After the push is successful, you can proceed to the final step.
 
 ---
 
-### Step 3: Deploy to Firebase Hosting
+### Step 4: Deploy to Firebase Hosting
 
-This command will build your application and deploy it.
+This command will build your application and deploy it to the project you selected in Step 1.
 
 ```bash
 npm run deploy
