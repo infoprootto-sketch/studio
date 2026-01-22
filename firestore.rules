@@ -114,7 +114,7 @@ service cloud.firestore {
     // --- STAFF-ONLY & DELEGATED ACCESS COLLECTIONS ---
     match /hotels/{hotelId}/{collection} 
         where collection in ['checkoutHistory', 'teamMembers', 'departments', 'shifts', 'slaRules', 'corporateClients', 'inventory', 'vendors', 'stockMovements'] {
-        allow list: if isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+        allow list: if (request.auth != null && request.auth.uid == hotelId) || isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
     }
     
     match /hotels/{hotelId}/{collection}/{docId}
