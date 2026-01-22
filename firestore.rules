@@ -9,7 +9,7 @@ service cloud.firestore {
     // ======================================================================
     
     function isHotelOwner(hotelId) {
-      // This function can now safely use `get` because the read rule for /hotels/{hotelId} is non-recursive for team members.
+      // This function can now safely use `get` because the read rule for /hotels/{hotelId} is non-recursive.
       let hotelData = get(/databases/$(database)/documents/hotels/$(hotelId)).data;
       let isOwnerInArray = request.auth != null && hotelData.get('ownerUids', []).hasAny([request.auth.uid]);
       return request.auth != null && (request.auth.uid == hotelId || isOwnerInArray);
@@ -112,10 +112,9 @@ service cloud.firestore {
     // --- STAFF-ONLY & DELEGATED ACCESS COLLECTIONS ---
 
     // Generic rule for LIST operations on multiple collections
-    // THIS IS THE PERMANENT FIX: adding `request.auth.uid == hotelId` as the first check.
     match /hotels/{hotelId}/{collection} 
         where collection in ['checkoutHistory', 'teamMembers', 'departments', 'shifts', 'slaRules', 'corporateClients', 'inventory', 'vendors', 'stockMovements'] {
-        allow list: if (request.auth.uid == hotelId) || isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+        allow list: if isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
     }
     
     // Generic rule for DOCUMENT operations (get, create, update, delete) on most staff-only collections
