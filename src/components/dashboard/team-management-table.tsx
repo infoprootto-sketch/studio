@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -11,7 +9,7 @@ import { EditTeamMemberDialog } from './edit-team-member-dialog';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 
@@ -107,6 +105,7 @@ export function TeamManagementTable({ teamMembers, departments, shifts, restaura
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="All">All Departments</SelectItem>
+                    <SelectSeparator />
                     {departmentOptions.map(deptName => (
                         <SelectItem key={deptName} value={deptName}>{deptName}</SelectItem>
                     ))}
@@ -229,3 +228,5 @@ export function TeamManagementTable({ teamMembers, departments, shifts, restaura
     </>
   );
 }
+
+    
