@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -28,7 +29,7 @@ interface EditTeamMemberDialogProps {
   onSave: (member: Partial<TeamMember>, password?: string) => void;
 }
 
-const roles: TeamRole[] = ['Admin', 'Manager', 'Reception', 'Member'];
+const roles: TeamRole[] = ['Owner', 'Admin', 'Manager', 'Reception', 'Member'];
 
 export function EditTeamMemberDialog({ member, departments, shifts, restaurants, isOpen, onClose, onSave }: EditTeamMemberDialogProps) {
   const [name, setName] = useState('');
@@ -65,17 +66,14 @@ export function EditTeamMemberDialog({ member, departments, shifts, restaurants,
     }
   }, [member, isOpen, departments, shifts]);
 
-  useEffect(() => {
-    if (role === 'Admin') {
-      setDepartment('Admin');
-    }
-    if (department !== 'F&B') {
-        setRestaurantId(undefined);
-    }
-  }, [role, department])
-
   const handleSave = () => {
-    const finalDepartment = role === 'Admin' ? 'Admin' : department;
+    let finalDepartment = department;
+    if (role === 'Owner' || role === 'Admin') {
+        finalDepartment = 'Administration';
+    } else if (role === 'Reception') {
+        finalDepartment = 'Front Office';
+    }
+    
     const finalRestaurantId = finalDepartment === 'F&B' ? restaurantId : undefined;
 
     if (!name || !email || !finalDepartment || !role || !shiftId) {
@@ -99,8 +97,10 @@ export function EditTeamMemberDialog({ member, departments, shifts, restaurants,
     onSave({ id: member?.id, name, email, department: finalDepartment, role, shiftId, restaurantId: finalRestaurantId }, password);
     onClose();
   };
-
+  
   if (!isOpen) return null;
+
+  const isDepartmentSpecificRole = role === 'Manager' || role === 'Member';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -150,7 +150,7 @@ export function EditTeamMemberDialog({ member, departments, shifts, restaurants,
                     </SelectContent>
                 </Select>
             </div>
-            {role !== 'Admin' && (
+            {isDepartmentSpecificRole && (
                 <div className="space-y-2">
                     <Label htmlFor="member-department">Department</Label>
                     <Select value={department} onValueChange={(value) => setDepartment(value as TeamDepartment)}>
@@ -158,7 +158,7 @@ export function EditTeamMemberDialog({ member, departments, shifts, restaurants,
                             <SelectValue placeholder="Select a department" />
                         </SelectTrigger>
                         <SelectContent>
-                            {departments.map((dept) => (
+                            {departments.filter(d => !['Administration', 'Front Office'].includes(d.name)).map((dept) => (
                                 <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
                             ))}
                         </SelectContent>
@@ -166,7 +166,7 @@ export function EditTeamMemberDialog({ member, departments, shifts, restaurants,
                 </div>
             )}
           </div>
-           {department === 'F&B' && role !== 'Admin' && (
+           {department === 'F&B' && isDepartmentSpecificRole && (
               <div className="space-y-2">
                 <Label htmlFor="member-restaurant">Kitchen / Restaurant</Label>
                 <Select value={restaurantId} onValueChange={setRestaurantId}>

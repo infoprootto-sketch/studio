@@ -151,18 +151,27 @@ export default function RegisterPage() {
       const hotelDocRef = doc(firestore, 'hotels', user.uid);
       const settingsDocRef = doc(firestore, 'hotels', user.uid, 'config', 'settings');
       
-      // Also create default Department, Shift, and Team Member profile for the admin
-      const adminDeptRef = doc(collection(firestore, 'hotels', user.uid, 'departments'));
-      const generalShiftRef = doc(collection(firestore, 'hotels', user.uid, 'shifts'));
-      const adminMemberRef = doc(firestore, 'hotels', user.uid, 'teamMembers', user.uid);
+      // Create default departments
+      const administrationDeptRef = doc(collection(firestore, 'hotels', user.uid, 'departments'));
+      const frontOfficeDeptRef = doc(collection(firestore, 'hotels', user.uid, 'departments'));
+      const housekeepingDeptRef = doc(collection(firestore, 'hotels', user.uid, 'departments'));
+      const fbDeptRef = doc(collection(firestore, 'hotels', user.uid, 'departments'));
+
+      const administrationDeptData: Omit<Department, 'id'> = { name: 'Administration', manages: [] };
+      const frontOfficeDeptData: Omit<Department, 'id'> = { name: 'Front Office', manages: [] };
+      const housekeepingDeptData: Omit<Department, 'id'> = { name: 'Housekeeping', manages: [] };
+      const fbDeptData: Omit<Department, 'id'> = { name: 'F&B', manages: [] };
       
-      const adminDeptData: Omit<Department, 'id'> = { name: 'Admin', manages: [] };
+      const generalShiftRef = doc(collection(firestore, 'hotels', user.uid, 'shifts'));
+      const ownerMemberRef = doc(firestore, 'hotels', user.uid, 'teamMembers', user.uid);
+      
       const generalShiftData: Omit<Shift, 'id'> = { name: 'General', startTime: '09:00', endTime: '17:00' };
-      const adminMemberData: Omit<TeamMember, 'id'> = {
+      
+      const ownerMemberData: Omit<TeamMember, 'id'> = {
         name: finalData.adminName,
         email: finalData.adminEmail,
-        department: 'Admin',
-        role: 'Admin',
+        department: 'Administration',
+        role: 'Owner',
         shiftId: generalShiftRef.id,
         attendanceStatus: 'Clocked Out',
       };
@@ -170,9 +179,12 @@ export default function RegisterPage() {
       await Promise.all([
         setDoc(hotelDocRef, hotelData),
         setDoc(settingsDocRef, hotelSettings),
-        setDoc(adminDeptRef, adminDeptData),
+        setDoc(administrationDeptRef, administrationDeptData),
+        setDoc(frontOfficeDeptRef, frontOfficeDeptData),
+        setDoc(housekeepingDeptRef, housekeepingDeptData),
+        setDoc(fbDeptRef, fbDeptData),
         setDoc(generalShiftRef, generalShiftData),
-        setDoc(adminMemberRef, adminMemberData),
+        setDoc(ownerMemberRef, ownerMemberData),
       ]);
 
       toast({

@@ -356,7 +356,7 @@
         "name": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "department": { "type": "string" },
-        "role": { "type": "string", "enum": ["Admin", "Manager", "Reception", "Member"] },
+        "role": { "type": "string", "enum": ["Owner", "Admin", "Manager", "Reception", "Member"] },
         "shiftId": { "type": "string" },
         "attendanceStatus": { "type": "string" },
         "lastClockIn": { "type": "string", "format": "date-time" },

@@ -1,4 +1,5 @@
 
+
 'use client';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -96,7 +97,7 @@ export default function LoginPage() {
         const teamMemberSnap = await getDoc(teamMemberRef);
         if (teamMemberSnap.exists()) {
           const memberData = teamMemberSnap.data() as TeamMember;
-          if (memberData.role === 'Admin') {
+          if (memberData.role === 'Admin' || memberData.role === 'Owner') {
             adminHotelId = hotelDoc.id;
             break;
           }

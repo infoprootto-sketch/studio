@@ -1,3 +1,5 @@
+
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -33,6 +35,7 @@ const departmentColors: Record<string, string> = {
 }
 
 const roleColors = {
+    'Owner': 'bg-yellow-500 text-black',
     'Admin': 'bg-red-500',
     'Manager': 'bg-primary',
     'Reception': 'bg-blue-500',
@@ -60,7 +63,8 @@ export function TeamManagementTable({ teamMembers, departments, shifts, restaura
 
   const departmentOptions = useMemo(() => {
     const allDepartments = new Set(departments.map(d => d.name));
-    allDepartments.add('Admin'); // Ensure 'Admin' is always an option
+    allDepartments.add('Administration');
+    allDepartments.add('Front Office');
     return Array.from(allDepartments).sort();
   }, [departments]);
 
@@ -114,6 +118,7 @@ export function TeamManagementTable({ teamMembers, departments, shifts, restaura
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="All">All Roles</SelectItem>
+                    <SelectItem value="Owner">Owner</SelectItem>
                     <SelectItem value="Admin">Admin</SelectItem>
                     <SelectItem value="Manager">Manager</SelectItem>
                     <SelectItem value="Reception">Reception</SelectItem>

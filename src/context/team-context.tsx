@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
@@ -66,12 +67,19 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     return (rawTeamMembers || []).map(member => ({
         ...member,
         lastClockIn: member.lastClockIn ? toDate(member.lastClockIn) : undefined,
-        attendanceHistory: (member.attendanceHistory || []).map(record => ({
-            ...record,
-            date: toDate(record.date)!,
-            clockIn: toDate(record.clockIn)!,
-            clockOut: record.clockOut ? toDate(record.clockOut) : null,
-        })) as AttendanceRecord[],
+        attendanceHistory: (member.attendanceHistory || [])
+          .map(record => {
+              const date = toDate(record.date);
+              const clockIn = toDate(record.clockIn);
+              if (!date || !clockIn) return null; // Filter out invalid records
+              return {
+                  ...record,
+                  date,
+                  clockIn,
+                  clockOut: record.clockOut ? toDate(record.clockOut) : null,
+              };
+          })
+          .filter(Boolean) as AttendanceRecord[],
     }));
   }, [rawTeamMembers]);
   
@@ -98,17 +106,17 @@ export function TeamProvider({ children }: { children: ReactNode }) {
                     const newMemberProfile: Omit<TeamMember, 'id'> = {
                         name: hotelData.adminName,
                         email: user.email!,
-                        department: 'Admin',
-                        role: 'Admin',
+                        department: 'Administration',
+                        role: 'Owner',
                         shiftId: defaultAdminShift ? defaultAdminShift.id : 'default-shift',
                         attendanceStatus: 'Clocked Out',
                     };
 
                     setDoc(memberDocRef, newMemberProfile, { merge: true }).catch(async (serverError) => {
                         const permissionError = new FirestorePermissionError({
-                            path: memberDocRef.path,
-                            operation: 'create',
-                            requestResourceData: newMemberProfile,
+                          path: memberDocRef.path,
+                          operation: 'create',
+                          requestResourceData: newMemberProfile,
                         });
                         errorEmitter.emit('permission-error', permissionError);
                     });
@@ -401,3 +409,4 @@ export function useTeam() {
   return context;
 }
     
+

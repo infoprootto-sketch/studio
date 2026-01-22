@@ -169,7 +169,7 @@ export interface CheckedOutStay {
 }
 
 export type TeamDepartment = 'Reception' | 'F&B' | 'Housekeeping' | 'Spa' | 'Gym' | string; // Allow custom strings
-export type TeamRole = 'Admin' | 'Manager' | 'Reception' | 'Member';
+export type TeamRole = 'Owner' | 'Admin' | 'Manager' | 'Reception' | 'Member';
 export type AttendanceStatus = 'Clocked In' | 'Clocked Out';
 
 export interface Shift {
