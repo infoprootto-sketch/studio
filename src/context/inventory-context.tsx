@@ -2,10 +2,9 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
 import type { InventoryItem, StockMovement, Vendor } from '@/lib/types';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { useHotelId } from './hotel-id-context';
-import { collection, doc } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { usePathname } from 'next/navigation';
 
 
@@ -63,41 +62,88 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const addInventoryItem = (itemData: Omit<InventoryItem, 'id'>) => {
     if (!inventoryCollectionRef) return;
-    addDocumentNonBlocking(inventoryCollectionRef, itemData);
+    addDoc(inventoryCollectionRef, itemData).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: inventoryCollectionRef.path,
+          operation: 'create',
+          requestResourceData: itemData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
   
   const updateInventoryItem = (itemId: string, updates: Partial<InventoryItem>) => {
     if (!firestore || !hotelId) return;
     const itemRef = doc(firestore, 'hotels', hotelId, 'inventory', itemId);
-    updateDocumentNonBlocking(itemRef, updates);
+    updateDoc(itemRef, updates).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: itemRef.path,
+          operation: 'update',
+          requestResourceData: updates,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   const deleteInventoryItem = (itemId: string) => {
     if (!firestore || !hotelId) return;
     const itemRef = doc(firestore, 'hotels', hotelId, 'inventory', itemId);
-    deleteDocumentNonBlocking(itemRef);
+    deleteDoc(itemRef).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: itemRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   const addVendor = (vendorData: Omit<Vendor, 'id'>) => {
     if (!vendorsCollectionRef) return;
-    addDocumentNonBlocking(vendorsCollectionRef, vendorData);
+    addDoc(vendorsCollectionRef, vendorData).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: vendorsCollectionRef.path,
+          operation: 'create',
+          requestResourceData: vendorData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   const updateVendor = (vendorId: string, updates: Partial<Vendor>) => {
     if (!firestore || !hotelId) return;
     const vendorRef = doc(firestore, 'hotels', hotelId, 'vendors', vendorId);
-    updateDocumentNonBlocking(vendorRef, updates);
+    updateDoc(vendorRef, updates).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: vendorRef.path,
+          operation: 'update',
+          requestResourceData: updates,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   const deleteVendor = (vendorId: string) => {
     if (!firestore || !hotelId) return;
     const vendorRef = doc(firestore, 'hotels', hotelId, 'vendors', vendorId);
-    deleteDocumentNonBlocking(vendorRef);
+    deleteDoc(vendorRef).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: vendorRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   const addStockMovement = (movementData: Omit<StockMovement, 'id'>) => {
     if (!stockMovementsCollectionRef) return;
-    addDocumentNonBlocking(stockMovementsCollectionRef, movementData);
+    addDoc(stockMovementsCollectionRef, movementData).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: stockMovementsCollectionRef.path,
+          operation: 'create',
+          requestResourceData: movementData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
 
