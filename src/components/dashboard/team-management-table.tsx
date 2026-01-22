@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -66,16 +67,7 @@ export function TeamManagementTable({ teamMembers, departments, shifts, restaura
     return Array.from(allDepartments).sort();
   }, [departments]);
 
-
-  const isAnyFilterActive = useMemo(() => {
-    return searchQuery !== '' || departmentFilter !== 'All' || roleFilter !== 'All' || shiftFilter !== 'All';
-  }, [searchQuery, departmentFilter, roleFilter, shiftFilter]);
-
   const filteredTeamMembers = useMemo(() => {
-    if (!isAnyFilterActive) {
-      return [];
-    }
-
     return (teamMembers || []).filter(member => {
         const searchMatch = !searchQuery || member.name.toLowerCase().includes(searchQuery.toLowerCase()) || member.email.toLowerCase().includes(searchQuery.toLowerCase());
         const departmentMatch = departmentFilter === 'All' || member.department === departmentFilter;
@@ -83,7 +75,7 @@ export function TeamManagementTable({ teamMembers, departments, shifts, restaura
         const shiftMatch = shiftFilter === 'All' || member.shiftId === shiftFilter;
         return searchMatch && departmentMatch && roleMatch && shiftMatch;
     });
-  }, [teamMembers, searchQuery, departmentFilter, roleFilter, shiftFilter, isAnyFilterActive]);
+  }, [teamMembers, searchQuery, departmentFilter, roleFilter, shiftFilter]);
 
   return (
     <>
@@ -157,7 +149,7 @@ export function TeamManagementTable({ teamMembers, departments, shifts, restaura
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isAnyFilterActive && filteredTeamMembers.length > 0 ? filteredTeamMembers.map((member) => (
+            {filteredTeamMembers.length > 0 ? filteredTeamMembers.map((member) => (
               <TableRow key={member.id}>
                 <TableCell className="font-medium">
                     <div>{member.name}</div>
@@ -209,7 +201,7 @@ export function TeamManagementTable({ teamMembers, departments, shifts, restaura
             )) : (
                 <TableRow>
                     <TableCell colSpan={role === 'admin' ? 5 : 4} className="h-24 text-center">
-                        {isAnyFilterActive ? "No team members found for the selected filters." : "Please search for a member or use the filters to display the team list."}
+                        No team members found.
                     </TableCell>
                 </TableRow>
             )}
@@ -229,4 +221,3 @@ export function TeamManagementTable({ teamMembers, departments, shifts, restaura
   );
 }
 
-    
