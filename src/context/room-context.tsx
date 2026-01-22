@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
@@ -9,10 +10,9 @@ import type {
     Hotel,
 } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { useHotelId } from './hotel-id-context';
-import { collection, doc, arrayUnion, arrayRemove, serverTimestamp, writeBatch, runTransaction, increment } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc, arrayUnion, arrayRemove, serverTimestamp, writeBatch, runTransaction, increment, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { getRoomDisplayStatus, isToday } from '@/lib/utils';
 import { useServices } from './service-context';
 
@@ -172,7 +172,14 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
   const updateRoom = useCallback((roomId: string, updates: Partial<Room>) => {
     if (!firestore || !hotelId) return;
     const roomRef = doc(firestore, 'hotels', hotelId, 'rooms', roomId);
-    updateDocumentNonBlocking(roomRef, updates);
+    updateDoc(roomRef, updates).catch(async (serverError) => {
+      const permissionError = new FirestorePermissionError({
+        path: roomRef.path,
+        operation: 'update',
+        requestResourceData: updates,
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    });
   },[firestore, hotelId]);
 
   const addRooms = useCallback(async (roomsToAdd: (Partial<Room>)[]) => {
@@ -240,7 +247,14 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
       status: 'Booked',
       stayId: `${room.number}-${shortId}`,
     };
-    updateDocumentNonBlocking(roomRef, { stays: arrayUnion(newStay) });
+    updateDoc(roomRef, { stays: arrayUnion(newStay) }).catch(async (serverError) => {
+      const permissionError = new FirestorePermissionError({
+        path: roomRef.path,
+        operation: 'update',
+        requestResourceData: { stays: arrayUnion(newStay) },
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    });
   },[firestore, hotelId, rooms]);
 
   const addGroupBooking = useCallback((groupDetails: GroupBookingDetails, assignments: RoomAssignment[]) => {
@@ -267,7 +281,14 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
         };
 
         const roomRef = doc(firestore, 'hotels', hotelId, 'rooms', assignment.roomId);
-        updateDocumentNonBlocking(roomRef, { stays: arrayUnion(newStay) });
+        updateDoc(roomRef, { stays: arrayUnion(newStay) }).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: roomRef.path,
+                operation: 'update',
+                requestResourceData: { stays: arrayUnion(newStay) },
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
     });
   }, [firestore, hotelId, rooms]);
 
@@ -284,7 +305,15 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
     const otherStays = room.stays.filter(s => s.stayId !== stayId);
 
     const roomRef = doc(firestore, 'hotels', hotelId, 'rooms', roomId);
-    updateDocumentNonBlocking(roomRef, { stays: [...otherStays, updatedStay] });
+    const updatedData = { stays: [...otherStays, updatedStay] };
+    updateDoc(roomRef, updatedData).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: roomRef.path,
+            operation: 'update',
+            requestResourceData: updatedData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   },[firestore, hotelId, rooms]);
   
   const removeStay = useCallback(async (roomId: string, stayId: string) => {
@@ -600,7 +629,14 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
 
   const addCategory = useCallback((categoryData: Omit<RoomCategory, 'id'>) => {
     if (!roomCategoriesCollectionRef) return;
-    addDocumentNonBlocking(roomCategoriesCollectionRef, categoryData);
+    addDoc(roomCategoriesCollectionRef, categoryData).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: roomCategoriesCollectionRef.path,
+            operation: 'create',
+            requestResourceData: categoryData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   },[roomCategoriesCollectionRef]);
   
   const updateCategory = useCallback(async (categoryId: string, updates: Partial<RoomCategory>) => {
@@ -621,9 +657,23 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
         
         batch.update(categoryRef, updates);
         
-        await batch.commit();
+        await batch.commit().catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: 'batch operation',
+                operation: 'write',
+                requestResourceData: { updates },
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
     } else {
-        updateDocumentNonBlocking(categoryRef, updates);
+        updateDoc(categoryRef, updates).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: categoryRef.path,
+                operation: 'update',
+                requestResourceData: updates,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
     }
   },[firestore, hotelId, rooms, roomCategories]);
 
@@ -644,7 +694,13 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
     }
 
     const categoryRef = doc(firestore, 'hotels', hotelId, 'roomCategories', categoryId);
-    deleteDocumentNonBlocking(categoryRef);
+    deleteDoc(categoryRef).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: categoryRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
     
     toast({
         title: "Category Deleted",
