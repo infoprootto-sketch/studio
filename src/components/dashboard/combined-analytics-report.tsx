@@ -5,10 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TrendingUp, BedDouble, Zap, Star } from 'lucide-react';
 import { useSettings } from '@/context/settings-context';
-import { RevenueChart, type ChartDataPoint } from './revenue-chart';
-import { OccupancyChart } from './occupancy-chart';
 import { Logo } from '../logo';
-import { ResponsiveContainer, PieChart, Pie, Cell, Bar, BarChart, CartesianGrid, XAxis, YAxis, LabelList } from 'recharts';
 
 // Data shapes
 export interface RevenueAnalyticsData {
@@ -16,12 +13,12 @@ export interface RevenueAnalyticsData {
     roomRevenue: number;
     serviceRevenue: number;
     adr: number;
-    chartData: ChartDataPoint[];
+    chartData: any[]; // Chart data is now generic
     filterLabel: string;
 }
 
 export interface OccupancyAnalyticsData {
-  chartData: { date: string; occupancy: number }[];
+  chartData: any[]; // Chart data is now generic
   filterLabel: string;
 }
 
@@ -43,11 +40,6 @@ interface CombinedAnalyticsReportProps {
 
 export function CombinedAnalyticsReport({ id, revenueData, serviceData, occupancyData }: CombinedAnalyticsReportProps) {
   const { formatPrice, legalName } = useSettings();
-
-  const chartData = React.useMemo(() => {
-    if (!serviceData?.categoryAnalytics) return [];
-    return [...serviceData.categoryAnalytics].sort((a, b) => b.revenue - a.revenue);
-  }, [serviceData.categoryAnalytics]);
 
   return (
     <div id={id} className="p-4 bg-white text-black print-container space-y-8">
@@ -84,11 +76,11 @@ export function CombinedAnalyticsReport({ id, revenueData, serviceData, occupanc
             </div>
             <div className="p-4 border rounded-lg">
                 <h3 className="text-lg font-semibold mb-2">Revenue Over Time</h3>
-                <div className="h-[350px] w-full"><RevenueChart data={revenueData.chartData} /></div>
+                <div className="h-[350px] w-full flex items-center justify-center text-muted-foreground">Chart library removed for stability.</div>
             </div>
             <div className="p-4 border rounded-lg mt-6">
                 <h3 className="text-lg font-semibold mb-2">Occupancy Over Time</h3>
-                <div className="h-[350px] w-full"><OccupancyChart data={occupancyData.chartData} /></div>
+                <div className="h-[350px] w-full flex items-center justify-center text-muted-foreground">Chart library removed for stability.</div>
             </div>
         </section>
 

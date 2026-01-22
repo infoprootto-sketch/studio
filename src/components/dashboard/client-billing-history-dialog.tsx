@@ -25,7 +25,7 @@ import { Calendar } from '@/components/ui/calendar';
 import type { DateRange } from 'react-day-picker';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
-import { EmailInvoiceDialog } from './email-invoice-dialog';
+
 
 interface ClientBillingHistoryDialogProps {
   client: CorporateClient | null;
@@ -156,7 +156,7 @@ export function ClientBillingHistoryDialog({ client, isOpen, onClose, onMarkOrde
                             <Download className="mr-2 h-4 w-4"/>
                             Summary
                         </Button>
-                        <Button onClick={() => setIsEmailDialogOpen(true)} disabled={selectedOrderIds.length === 0} className="flex-1 sm:flex-initial">
+                        <Button onClick={() => toast({ title: 'Email functionality is disabled.'})} disabled={selectedOrderIds.length === 0} className="flex-1 sm:flex-initial">
                             <Mail className="mr-2 h-4 w-4"/>
                             Email ({selectedOrderIds.length})
                         </Button>
@@ -230,12 +230,6 @@ export function ClientBillingHistoryDialog({ client, isOpen, onClose, onMarkOrde
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <EmailInvoiceDialog
-        isOpen={isEmailDialogOpen}
-        onClose={() => setIsEmailDialogOpen(false)}
-        client={client}
-        selectedOrders={selectedOrders}
-      />
     </>
   );
 }

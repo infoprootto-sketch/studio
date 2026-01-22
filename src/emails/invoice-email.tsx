@@ -1,167 +1,127 @@
+'use client';
 
-import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Preview,
-  Text,
-  Section,
-  Row,
-  Column,
-  Hr,
-} from '@react-email/components';
-import * as React from 'react';
-import { BilledOrder } from '@/lib/types';
-import { Currency } from '@/lib/countries-currencies';
+import React, { useMemo } from 'react';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { IndianRupee, TrendingUp, BedDouble, LogOut, AreaChart } from 'lucide-react';
+import { useSettings } from '@/context/settings-context';
+import type { RevenueAnalyticsData, OccupancyAnalyticsData } from './combined-analytics-report';
 
-interface InvoiceEmailProps {
-  clientName?: string;
-  orders: BilledOrder[];
-  hotelDetails?: {
-    legalName?: string;
-    address?: string;
-  };
-  currency?: Currency;
+interface RevenuePageContentProps {
+    data: RevenueAnalyticsData;
+    occupancyData: OccupancyAnalyticsData;
+    todaysDepartures: number;
+    expectedRevenue: number;
 }
 
-const formatPrice = (price: number, currency?: Currency) => {
-    const safeCurrency = currency || { code: 'USD', symbol: '$' };
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: safeCurrency.code,
-    }).format(price);
-};
+export default function RevenuePageContent({ data, occupancyData, todaysDepartures, expectedRevenue }: RevenuePageContentProps) {
+    const { formatPrice } = useSettings();
+    const { totalRevenue, roomRevenue, serviceRevenue, adr, chartData } = data;
 
-export const InvoiceEmail = ({ clientName, orders, hotelDetails, currency }: InvoiceEmailProps) => {
-    const totalAmount = orders.reduce((sum, order) => sum + order.amount, 0);
-    const hotelName = hotelDetails?.legalName || 'Your Hotel';
+    const overallOccupancy = useMemo(() => {
+        if (!occupancyData?.chartData || occupancyData.chartData.length === 0) return 0;
+        const total = occupancyData.chartData.reduce((sum, day) => sum + day.occupancy, 0);
+        return total / occupancyData.chartData.length;
+    }, [occupancyData]);
+
 
     return (
-        <Html>
-        <Head />
-        <Preview>Your Invoice from {hotelName}</Preview>
-        <Body style={main}>
-            <Container style={container}>
-            <Heading style={heading}>Invoice Summary</Heading>
-            <Text style={paragraph}>Dear {clientName || 'Valued Client'},</Text>
-            <Text style={paragraph}>
-                Please find attached the invoice summary for your recent stays with {hotelName}.
-            </Text>
-            
-            <Section style={table}>
-                <Row style={tableHeader}>
-                    <Column>Guest Name</Column>
-                    <Column>Room</Column>
-                    <Column style={textRight}>Amount</Column>
-                </Row>
-                {orders.map((order) => (
-                    <Row key={order.id} style={tableRow}>
-                        <Column>{order.guestName}</Column>
-                        <Column>{order.roomNumber}</Column>
-                        <Column style={textRight}>{formatPrice(order.amount, currency)}</Column>
-                    </Row>
-                ))}
-            </Section>
-
-            <Hr style={hr} />
-
-            <Row style={totalRow}>
-                <Column style={totalLabel}>Total Amount</Column>
-                <Column style={{ ...textRight, ...totalAmountStyle }}>
-                    {formatPrice(totalAmount, currency)}
-                </Column>
-            </Row>
-
-            <Hr style={hr} />
-
-            <Text style={paragraph}>
-                Thank you for your business. We look forward to welcoming you and your guests back soon.
-            </Text>
-            <Text style={footer}>
-                {hotelName} | {hotelDetails?.address || ''}
-            </Text>
-            </Container>
-        </Body>
-        </Html>
+        <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                        <IndianRupee className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatPrice(totalRevenue)}</div>
+                        <p className="text-xs text-muted-foreground">From all paid bills in the selected range</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Room Revenue</CardTitle>
+                        <BedDouble className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatPrice(roomRevenue)}</div>
+                        <p className="text-xs text-muted-foreground">Revenue from room charges only</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Service Revenue</CardTitle>
+                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatPrice(serviceRevenue)}</div>
+                        <p className="text-xs text-muted-foreground">Revenue from F&B, laundry, etc.</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Avg. Daily Rate (ADR)</CardTitle>
+                        <IndianRupee className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatPrice(adr)}</div>
+                        <p className="text-xs text-muted-foreground">Avg. room revenue per occupied room</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Avg. Occupancy</CardTitle>
+                        <AreaChart className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{overallOccupancy.toFixed(1)}%</div>
+                        <p className="text-xs text-muted-foreground">For the selected date range</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Today's Departures</CardTitle>
+                        <LogOut className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{todaysDepartures}</div>
+                        <p className="text-xs text-muted-foreground">Guests scheduled to check out today</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Expected Revenue Today</CardTitle>
+                        <IndianRupee className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatPrice(expectedRevenue)}</div>
+                        <p className="text-xs text-muted-foreground">From today's scheduled departures</p>
+                    </CardContent>
+                </Card>
+            </div>
+             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Revenue Over Time</CardTitle>
+                        <CardDescription>
+                            Revenue generated from checkouts within the selected date range.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[350px] w-full">
+                       <div className="flex items-center justify-center h-full text-muted-foreground">Charting library removed for stability.</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Occupancy Over Time</CardTitle>
+                        <CardDescription>
+                            Hotel occupancy percentage for the selected date range.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[350px] w-full">
+                       <div className="flex items-center justify-center h-full text-muted-foreground">Charting library removed for stability.</div>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
     );
-};
-
-export default InvoiceEmail;
-
-const main = {
-  backgroundColor: '#f6f9fc',
-  fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif',
-};
-
-const container = {
-  backgroundColor: '#ffffff',
-  margin: '0 auto',
-  padding: '20px 0 48px',
-  marginBottom: '64px',
-  border: '1px solid #f0f0f0',
-  borderRadius: '4px',
-};
-
-const heading = {
-  fontSize: '28px',
-  fontWeight: 'bold',
-  marginTop: '48px',
-  textAlign: 'center' as const,
-};
-
-const paragraph = {
-  fontSize: '16px',
-  lineHeight: '24px',
-  padding: '0 20px',
-};
-
-const table = {
-  width: '100%',
-  padding: '0 20px',
-  marginTop: '32px',
-};
-
-const tableHeader = {
-  fontWeight: 'bold',
-  fontSize: '12px',
-  color: '#999',
-  borderBottom: '1px solid #eaeaea',
-  paddingBottom: '8px',
-};
-
-const tableRow = {
-  fontSize: '14px',
-  lineHeight: '24px',
-};
-
-const hr = {
-  borderColor: '#eaeaea',
-  margin: '20px 0',
-};
-
-const textRight = {
-  textAlign: 'right' as const,
-};
-
-const totalRow = {
-    padding: '0 20px',
-    fontWeight: 'bold',
-};
-
-const totalLabel = {
-    fontSize: '16px',
-};
-
-const totalAmountStyle = {
-    fontSize: '18px',
-};
-
-const footer = {
-  color: '#8898aa',
-  fontSize: '12px',
-  lineHeight: '16px',
-  textAlign: 'center' as const,
-  marginTop: '32px',
-};
+}

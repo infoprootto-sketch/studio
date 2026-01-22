@@ -4,8 +4,6 @@ import React, { useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { IndianRupee, TrendingUp, BedDouble, LogOut, AreaChart } from 'lucide-react';
 import { useSettings } from '@/context/settings-context';
-import { RevenueChart } from '@/components/dashboard/revenue-chart';
-import { OccupancyChart } from '@/components/dashboard/occupancy-chart';
 import type { RevenueAnalyticsData, OccupancyAnalyticsData } from './combined-analytics-report';
 
 interface RevenuePageContentProps {
@@ -109,7 +107,7 @@ export default function RevenuePageContent({ data, occupancyData, todaysDepartur
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="h-[350px] w-full">
-                       <RevenueChart data={chartData} />
+                       <div className="flex items-center justify-center h-full text-muted-foreground">Charting library removed for stability.</div>
                     </CardContent>
                 </Card>
                 <Card>
@@ -120,7 +118,7 @@ export default function RevenuePageContent({ data, occupancyData, todaysDepartur
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="h-[350px] w-full">
-                       <OccupancyChart data={occupancyData.chartData} />
+                       <div className="flex items-center justify-center h-full text-muted-foreground">Charting library removed for stability.</div>
                     </CardContent>
                 </Card>
             </div>
