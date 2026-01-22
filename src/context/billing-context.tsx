@@ -6,7 +6,6 @@ import type { CorporateClient, BilledOrder } from '@/lib/types';
 import { useFirestore, useCollection, useMemoFirebase, useUser, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { useHotelId } from './hotel-id-context';
 import { collection, doc, addDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface BillingContextType {
   corporateClients: CorporateClient[];
@@ -49,26 +48,58 @@ export function BillingProvider({ children }: { children: ReactNode }) {
       ...clientData,
       billedOrders: [],
     };
-    addDocumentNonBlocking(clientsCollectionRef, newClientData);
+    addDoc(clientsCollectionRef, newClientData)
+      .catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: clientsCollectionRef.path,
+          operation: 'create',
+          requestResourceData: newClientData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
   
   const updateClient = (clientId: string, updates: Partial<CorporateClient>) => {
     if (!firestore || !hotelId) return;
     const clientRef = doc(firestore, 'hotels', hotelId, 'corporateClients', clientId);
-    updateDocumentNonBlocking(clientRef, updates);
+    updateDoc(clientRef, updates)
+      .catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: clientRef.path,
+          operation: 'update',
+          requestResourceData: updates,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   const deleteClient = (clientId: string) => {
     if (!firestore || !hotelId) return;
     const clientRef = doc(firestore, 'hotels', hotelId, 'corporateClients', clientId);
-    deleteDocumentNonBlocking(clientRef);
+    deleteDoc(clientRef)
+      .catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: clientRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   const addBilledOrder = (clientId: string, order: Omit<BilledOrder, 'id'>) => {
     if (!firestore || !hotelId) return;
     const clientRef = doc(firestore, 'hotels', hotelId, 'corporateClients', clientId);
     const newOrder = { ...order, id: `bo-${Date.now()}-${Math.random().toString(36).substr(2, 5)}` };
-    updateDocumentNonBlocking(clientRef, { billedOrders: arrayUnion(newOrder) });
+    const updates = { billedOrders: arrayUnion(newOrder) };
+    updateDoc(clientRef, updates)
+        .catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: clientRef.path,
+                operation: 'update',
+                requestResourceData: updates,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
   };
   
   const updateBilledOrder = (clientId: string, orderId: string, updates: Partial<BilledOrder>) => {
