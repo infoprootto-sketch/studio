@@ -104,11 +104,11 @@ service cloud.firestore {
     // --- SENSITIVE FINANCIAL HISTORY ---
     // Restricted to Owners, Admins, and delegated viewers. No regular staff access.
     match /hotels/{hotelId}/checkoutHistory/{docId} {
-      allow read, list: if isHotelAdminOrOwner(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow read, list: if (request.auth != null && request.auth.uid == hotelId) || isTeamOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow write: if isHotelAdminOrOwner(hotelId);
     }
     match /hotels/{hotelId}/corporateClients/{docId} {
-      allow read, list: if isHotelAdminOrOwner(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow read, list: if (request.auth != null && request.auth.uid == hotelId) || isTeamOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow write: if isHotelAdminOrOwner(hotelId);
     }
     
