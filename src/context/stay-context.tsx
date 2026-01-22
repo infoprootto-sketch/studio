@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useMemo, ReactNode, useState, useEffect } from 'react';
-import type { Room, Stay, ServiceRequest, HotelService, Broadcast } from '@/lib/types';
+import type { Room, Stay, ServiceRequest, HotelService, Broadcast, ActiveStay } from '@/lib/types';
 import { useSettings } from './settings-context';
 import { differenceInCalendarDays } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -11,7 +11,9 @@ import { useInventory } from './inventory-context';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { doc, collection, where, query, getDoc, arrayUnion, limit } from 'firebase/firestore';
 import { useHotelId } from './hotel-id-context';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useRouter } from 'next/navigation';
+import { PageLoader } from '@/components/common/page-loader';
+
 
 interface StayContextType {
   stay: Stay | undefined;
@@ -48,6 +50,7 @@ type CartItem = {
 export function StayProvider({ children, stayId }: { children: ReactNode; stayId: string }) {
   const firestore = useFirestore();
   const hotelId = useHotelId();
+  const router = useRouter();
   const { hotelServices, addServiceRequests: addServiceRequestsToContext } = useServices();
   const { gstRate, serviceChargeRate } = useSettings();
   const { inventory, updateInventoryItem, addStockMovement } = useInventory();
@@ -78,9 +81,18 @@ export function StayProvider({ children, stayId }: { children: ReactNode; stayId
     firestore && stayId ? doc(firestore, 'activeStays', stayId) : null
   ), [firestore, stayId]);
 
-  const { data: activeStayData } = useDoc<{ roomId: string }>(activeStayRef);
+  const { data: activeStayData, isLoading: isLoadingActiveStay } = useDoc<ActiveStay>(activeStayRef);
   
   const roomId = activeStayData?.roomId;
+  
+  useEffect(() => {
+    if (!isLoadingActiveStay && (!activeStayData || activeStayData.hotelId !== hotelId)) {
+        // If loading is finished and there's no active stay data,
+        // or if the hotelId doesn't match, the stay is invalid. Redirect.
+        router.push('/guest/login');
+    }
+  }, [isLoadingActiveStay, activeStayData, hotelId, router]);
+
 
   // Step 2: Use the roomId to fetch the specific room document
   const roomRef = useMemoFirebase(() => (
@@ -184,6 +196,10 @@ export function StayProvider({ children, stayId }: { children: ReactNode; stayId
       return [...prevCart, { service, quantity: newQuantity }];
     });
   };
+  
+   if (isLoadingActiveStay || !activeStayData) {
+      return <PageLoader />;
+  }
 
   return (
     <StayContext.Provider value={{ 
@@ -204,4 +220,3 @@ export function useStay() {
   }
   return context;
 }
-    

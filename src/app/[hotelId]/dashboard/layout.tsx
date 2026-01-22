@@ -1,5 +1,10 @@
 
-import React from 'react';
+'use client';
+
+import React, { useEffect, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@/firebase';
+import { PageLoader } from '@/components/common/page-loader';
 import { AppSidebar } from '@/components/common/sidebar';
 import { Header } from '@/components/common/header';
 import { HotelIdProvider } from '@/context/hotel-id-context';
@@ -17,6 +22,27 @@ export default function DashboardLayout({
   children: React.ReactNode,
   params: { hotelId: string }
 }) {
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      // Redirect to the main login page if not authenticated
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
+
+  if (isUserLoading || !user) {
+    // Show a loader while checking auth status or if there's no user
+    // This prevents a flash of the dashboard content
+    return (
+      <Suspense fallback={null}>
+        <PageLoader />
+      </Suspense>
+    );
+  }
+
+  // If authenticated, render the full dashboard layout with all providers
   return (
     <HotelIdProvider hotelId={params.hotelId}>
       <SettingsProvider>
