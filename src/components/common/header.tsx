@@ -44,6 +44,7 @@ import { useAuth, useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
 import { ThemeToggle } from '../theme-toggle';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export function Header() {
   const hotelId = useHotelId();
@@ -166,6 +167,8 @@ export function Header() {
     { href: `/${hotelId}/dashboard/settings`, icon: Settings, label: 'Settings' },
   ];
 
+  const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-1');
+
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
       <Sheet>
@@ -256,12 +259,12 @@ export function Header() {
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
             <Image
-              src={user?.photoURL || "https://picsum.photos/seed/1/36/36"}
+              src={user?.photoURL || userAvatar?.imageUrl || "https://picsum.photos/seed/1/36/36"}
               width={36}
               height={36}
               alt="Avatar"
               className="overflow-hidden"
-              data-ai-hint="person face"
+              data-ai-hint={userAvatar?.imageHint || "person face"}
             />
           </Button>
         </DropdownMenuTrigger>
