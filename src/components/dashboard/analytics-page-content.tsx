@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -7,8 +5,6 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useSettings } from '@/context/settings-context';
 import { TrendingUp, Zap, Star } from 'lucide-react';
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, LabelList } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import type { ServiceAnalyticsData } from './combined-analytics-report';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
@@ -21,23 +17,6 @@ export default function AnalyticsPageContent({ data }: AnalyticsPageContentProps
     const { totalServiceRevenue, mostRequestedService, topRevenueService, serviceAnalytics, categoryAnalytics } = data;
     const [categoryFilter, setCategoryFilter] = useState('all');
 
-    const chartData = React.useMemo(() => {
-        return [...(categoryAnalytics || [])].sort((a, b) => b.revenue - a.revenue);
-    }, [categoryAnalytics]);
-
-    const chartConfig = React.useMemo(() => {
-        const config: ChartConfig = {};
-        if (categoryAnalytics) {
-            categoryAnalytics.forEach(cat => {
-                config[cat.name] = {
-                    label: cat.name,
-                    color: cat.fill,
-                }
-            });
-        }
-        return config;
-    }, [categoryAnalytics]);
-    
     const filteredServiceAnalytics = useMemo(() => {
         if (categoryFilter === 'all') {
             return serviceAnalytics;
@@ -87,35 +66,9 @@ export default function AnalyticsPageContent({ data }: AnalyticsPageContentProps
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                        <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height={chartData.length * 40}>
-                                <BarChart
-                                    data={chartData}
-                                    layout="vertical"
-                                    margin={{
-                                        left: 30,
-                                        right: 10,
-                                    }}
-                                >
-                                    <CartesianGrid horizontal={false} />
-                                    <YAxis
-                                        dataKey="name"
-                                        type="category"
-                                        tickLine={false}
-                                        tickMargin={10}
-                                        axisLine={false}
-                                        width={150}
-                                        className="text-xs"
-                                    />
-                                    <XAxis dataKey="revenue" type="number" hide />
-                                    <ChartTooltip
-                                        cursor={{ fill: 'hsl(var(--muted))' }}
-                                        content={<ChartTooltipContent formatter={(value) => formatPrice(Number(value))} />}
-                                    />
-                                    <Bar dataKey="revenue" layout="vertical" radius={5} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </ChartContainer>
+                        <div className="min-h-[300px] w-full flex items-center justify-center text-muted-foreground">
+                            Chart removed for stability.
+                        </div>
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -124,7 +77,7 @@ export default function AnalyticsPageContent({ data }: AnalyticsPageContentProps
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {chartData.map(cat => (
+                                {categoryAnalytics.map(cat => (
                                     <TableRow key={cat.name}>
                                         <TableCell className="font-medium">{cat.name}</TableCell>
                                         <TableCell className="text-right font-mono">{formatPrice(cat.revenue)}</TableCell>

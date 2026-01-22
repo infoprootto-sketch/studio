@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -11,7 +9,7 @@ import { Calendar } from '@/components/ui/calendar';
 import type { Room, Stay, RoomCategory } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { addDays, format, differenceInCalendarDays, startOfDay, isBefore } from 'date-fns';
-import { Calendar as CalendarIcon, Users, Bed, IndianRupee, User, PlusCircle, Star, Trash2, Upload, Download } from 'lucide-react';
+import { Calendar as CalendarIcon, Users, Bed, IndianRupee, User, PlusCircle, Star, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
 import { useSettings } from '@/context/settings-context';
@@ -31,8 +29,6 @@ import { Separator } from '../ui/separator';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Select, SelectContent, SelectTrigger, SelectValue, SelectItem } from '../ui/select';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '../ui/card';
-import Papa from 'papaparse';
-
 
 type BookingType = 'single' | 'group';
 type BillingOption = 'separate' | 'clubbed';
@@ -44,19 +40,11 @@ interface GroupRoomAssignment {
     roomCharge: number | '';
 }
 
-interface CsvRow {
-    room_number: string;
-    guest_name: string;
-    guest_number?: string;
-    room_charge?: string;
-}
-
 export function BookingForm() {
   const { rooms, roomCategories } = useRoomState();
   const { addStay, addGroupBooking } = useRoomActions();
   const { toast } = useToast();
   const { currency, formatPrice } = useSettings();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [bookingType, setBookingType] = useState<BookingType>('single');
   const [billingOption, setBillingOption] = useState<BillingOption>('separate');
@@ -235,106 +223,6 @@ export function BookingForm() {
     }
   }
 
-  const handleDownloadTemplate = () => {
-    if (availableRooms.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "No Available Rooms",
-        description: "There are no rooms available for the selected dates to generate a template.",
-      });
-      return;
-    }
-
-    const headers = ['room_number', 'room_type', 'base_price', 'guest_name', 'guest_number', 'room_charge'];
-    const csvData = availableRooms.map(room => {
-      const category = roomCategories.find(c => c.name === room.type);
-      return {
-        room_number: room.number,
-        room_type: room.type,
-        base_price: category?.basePrice || 0,
-        guest_name: '',
-        guest_number: '',
-        room_charge: category?.basePrice || '',
-      };
-    });
-
-    const csv = Papa.unparse(csvData, { header: true });
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `group_booking_template_${format(new Date(), 'yyyy-MM-dd')}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast({
-      title: "Template Downloaded",
-      description: "A CSV template with available rooms has been downloaded.",
-    });
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    Papa.parse<CsvRow>(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-            const { data, errors } = results;
-
-            if (errors.length > 0) {
-                toast({
-                    variant: "destructive",
-                    title: "CSV Parsing Error",
-                    description: `Error on row ${errors[0].row}: ${errors[0].message}`,
-                });
-                return;
-            }
-
-            const newSelectedRooms: Room[] = [];
-            const newAssignments: Record<string, Partial<GroupRoomAssignment>> = {};
-            let unavailableCount = 0;
-
-            data.forEach(row => {
-                const room = availableRooms.find(r => r.number === row.room_number);
-                if (room) {
-                    newSelectedRooms.push(room);
-                    newAssignments[room.id] = {
-                        guestName: row.guest_name,
-                        guestNumber: row.guest_number || '',
-                        roomCharge: row.room_charge ? Number(row.room_charge) : (roomCategories.find(c => c.name === room.type)?.basePrice || ''),
-                    };
-                } else {
-                    unavailableCount++;
-                }
-            });
-
-            setSelectedRooms(newSelectedRooms);
-            setGroupAssignments(newAssignments);
-            toast({
-                title: "CSV Processed",
-                description: `${newSelectedRooms.length} rooms added to booking. ${unavailableCount > 0 ? `${unavailableCount} rooms were unavailable or not found.` : ''}`,
-            });
-        },
-        error: (error) => {
-            toast({
-                variant: "destructive",
-                title: "File Read Error",
-                description: error.message,
-            });
-        }
-    });
-
-    // Reset file input
-    if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-    }
-  };
-
-
   const nights = date?.from && date?.to ? differenceInCalendarDays(date.to, date.from) : 0;
   
   const totalCost = useMemo(() => {
@@ -429,19 +317,7 @@ export function BookingForm() {
                                     <div className="p-2 border-t"><Button onClick={() => setIsRoomPickerOpen(false)} className="w-full">Done</Button></div>
                                 </PopoverContent>
                             </Popover>
-                             {bookingType === 'group' && (
-                                <>
-                                    <input type="file" ref={fileInputRef} className="hidden" accept=".csv" onChange={handleFileUpload} />
-                                    <Button variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} title="Bulk Upload CSV">
-                                        <Upload className="size-4" />
-                                    </Button>
-                                    <Button variant="outline" size="icon" onClick={handleDownloadTemplate} title="Download CSV Template">
-                                        <Download className="size-4" />
-                                    </Button>
-                                </>
-                            )}
                         </div>
-                         {bookingType === 'group' && <p className="text-xs text-muted-foreground">CSV format: `room_number,guest_name,...` (header required).</p>}
                     </div>
                 </CardContent>
             </Card>

@@ -4,17 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Logo } from '@/components/logo';
 import { ArrowRight, LogIn, User, Users, Building, Briefcase, Bot, FileSignature, Settings, Activity, ShieldAlert, IndianRupee } from 'lucide-react';
-import { useEffect, useRef, useState, MouseEvent, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/firebase';
-import { signOut } from 'firebase/auth';
-import { useToast } from '@/hooks/use-toast';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import Autoplay from "embla-carousel-autoplay"
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { ThemeToggle } from '@/components/theme-toggle';
+import { Suspense } from 'react';
 import { HomePageClient } from '@/components/home-page-client';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 
 const hotelFeatures = [
@@ -58,10 +50,6 @@ const howItWorksSteps = [
 ];
 
 export default function HomePage() {
-  const autoplayPlugin = useRef(
-    Autoplay({ delay: 4000, stopOnInteraction: true, stopOnMouseEnter: true })
-  );
-  
   return (
     <>
       <Suspense fallback={null}>

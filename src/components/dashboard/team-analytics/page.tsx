@@ -1,9 +1,7 @@
-
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { differenceInMinutes, format, startOfMonth, endOfMonth, isWithinInterval, subMonths, addMonths } from 'date-fns';
@@ -22,9 +20,6 @@ import { useTeam } from '@/context/team-context';
 import { useHotelId } from '@/context/hotel-id-context';
 import { doc } from 'firebase/firestore';
 import { Hotel } from '@/lib/types';
-
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export default function TeamAnalyticsPage({ role = 'admin' }: { role?: 'admin' | 'reception' | 'team' }) {
     const { theme } = useTheme();
@@ -286,54 +281,16 @@ export default function TeamAnalyticsPage({ role = 'admin' }: { role?: 'admin' |
                     <CardHeader>
                         <CardTitle>Tasks by Team Member</CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={analyticsData.memberStats.filter(m => m.tasksCompleted > 0)}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                                <Tooltip
-                                    contentStyle={{
-                                        backgroundColor: theme === 'dark' ? 'black' : 'white',
-                                        border: `1px solid hsl(var(--border))`
-                                    }}
-                                />
-                                <Bar dataKey="tasksCompleted" fill="hsl(var(--primary))" name="Tasks Completed" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                    <CardContent className="h-[300px] flex items-center justify-center text-muted-foreground">
+                        Charting library removed for stability.
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader>
                         <CardTitle>Task Distribution by Department</CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
-                         <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={analyticsData.departmentStats.filter(d => d.tasksCompleted > 0)}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                    outerRadius={80}
-                                    fill="#8884d8"
-                                    dataKey="tasksCompleted"
-                                    nameKey="name"
-                                    fontSize={12}
-                                >
-                                    {analyticsData.departmentStats.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip
-                                     contentStyle={{
-                                        backgroundColor: theme === 'dark' ? 'black' : 'white',
-                                        border: `1px solid hsl(var(--border))`
-                                    }}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
+                    <CardContent className="h-[300px] flex items-center justify-center text-muted-foreground">
+                         Charting library removed for stability.
                     </CardContent>
                 </Card>
             </div>

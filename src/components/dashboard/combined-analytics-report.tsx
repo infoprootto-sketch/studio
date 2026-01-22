@@ -9,7 +9,6 @@ import { RevenueChart, type ChartDataPoint } from './revenue-chart';
 import { OccupancyChart } from './occupancy-chart';
 import { Logo } from '../logo';
 import { ResponsiveContainer, PieChart, Pie, Cell, Bar, BarChart, CartesianGrid, XAxis, YAxis, LabelList } from 'recharts';
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart';
 
 // Data shapes
 export interface RevenueAnalyticsData {
@@ -44,16 +43,6 @@ interface CombinedAnalyticsReportProps {
 
 export function CombinedAnalyticsReport({ id, revenueData, serviceData, occupancyData }: CombinedAnalyticsReportProps) {
   const { formatPrice, legalName } = useSettings();
-
-  const chartConfig: ChartConfig = React.useMemo(() => {
-    const config: ChartConfig = {};
-    if (serviceData?.categoryAnalytics) {
-        serviceData.categoryAnalytics.forEach(cat => {
-            config[cat.name] = { label: cat.name, color: cat.fill };
-        });
-    }
-    return config;
-  }, [serviceData.categoryAnalytics]);
 
   const chartData = React.useMemo(() => {
     if (!serviceData?.categoryAnalytics) return [];
@@ -123,31 +112,7 @@ export function CombinedAnalyticsReport({ id, revenueData, serviceData, occupanc
             <div className="p-4 border rounded-lg mb-6">
                 <h3 className="text-lg font-semibold mb-2">Revenue by Category</h3>
                 <div className="grid grid-cols-2 gap-8 items-center">
-                    <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height={chartData.length * 40}>
-                            <BarChart
-                                data={chartData}
-                                layout="vertical"
-                                margin={{
-                                    left: 10,
-                                    right: 50, 
-                                }}
-                            >
-                                <CartesianGrid horizontal={false} />
-                                <YAxis
-                                    dataKey="name"
-                                    type="category"
-                                    tickLine={false}
-                                    tickMargin={5}
-                                    axisLine={false}
-                                    width={150}
-                                    className="text-xs"
-                                />
-                                <XAxis dataKey="revenue" type="number" hide />
-                                <Bar dataKey="revenue" layout="vertical" radius={5} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </ChartContainer>
+                    <div className="min-h-[300px] w-full flex items-center justify-center text-muted-foreground">Chart removed for stability.</div>
                     <Table><TableHeader><TableRow><TableHead>Category</TableHead><TableHead className="text-right">Revenue</TableHead></TableRow></TableHeader><TableBody>{serviceData.categoryAnalytics.map(cat => (<TableRow key={cat.name}><TableCell className="font-medium">{cat.name}</TableCell><TableCell className="text-right font-mono">{formatPrice(cat.revenue)}</TableCell></TableRow>))}</TableBody></Table>
                 </div>
             </div>

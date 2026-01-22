@@ -21,6 +21,12 @@ const nextConfig = {
       },
     ],
   },
+  experimental: {
+    allowedDevOrigins: [
+        "https://6000-firebase-staycentralv2-1764836694677.cluster-cz5nqyh5nreq6ua6gaqd7okl7o.cloudworkstations.dev",
+        "https://9000-firebase-staycentralv2-1764836694677.cluster-cz5nqyh5nreq6ua6gaqd7okl7o.cloudworkstations.dev",
+    ]
+  }
 };
 
 module.exports = nextConfig;
