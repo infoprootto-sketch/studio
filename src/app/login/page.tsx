@@ -51,17 +51,29 @@ export default function LoginPage() {
     setLoading(true);
     setIsSuccess(false);
 
-    try {
-      if (!auth || !firestore) {
+    if (!auth) {
         toast({
-          variant: "destructive",
-          title: "Authentication service not available.",
+            variant: "destructive",
+            title: "Authentication service not available.",
+        });
+        setLoading(false);
+        return;
+    }
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      if (!firestore) {
+        await auth.signOut();
+        toast({
+            variant: "destructive",
+            title: "Service Configuration Error",
+            description: "The database is not available to verify your role. Please contact an administrator.",
         });
         setLoading(false);
         return;
       }
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
 
       // Check if the user is a hotel owner (primary admin)
       const hotelDocRef = doc(firestore, 'hotels', user.uid);

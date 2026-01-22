@@ -62,7 +62,20 @@ export default function TeamMemberLoginPage() {
 
   useEffect(() => {
     const handleRedirect = async () => {
-        if (!isUserLoading && user && firestore) {
+        if (isUserLoading) return;
+
+        if (user) {
+            if (!firestore) {
+                if (auth) await auth.signOut();
+                toast({
+                    variant: "destructive",
+                    title: "Service Configuration Error",
+                    description: "The database is not available. Please contact an administrator.",
+                });
+                setIsLoading(false);
+                return;
+            }
+
             const teamMemberRef = doc(firestore, `hotels/${hotelId}/teamMembers/${user.uid}`);
             const teamMemberSnap = await getDoc(teamMemberRef);
 

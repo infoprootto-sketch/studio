@@ -38,11 +38,17 @@ export default function GuestLoginPage() {
     }
     setIsLoading(true);
 
+    if (!firestore) {
+        toast({
+            variant: "destructive",
+            title: "Service Configuration Error",
+            description: "The database is not available. Please contact the front desk.",
+        });
+        setIsLoading(false);
+        return;
+    }
+
     try {
-        if (!firestore) {
-            throw new Error("Firestore is not initialized.");
-        }
-        
         // Securely check for the active stay document
         const activeStayRef = doc(firestore, `activeStays/${trimmedStayId}`);
         const activeStaySnap = await getDoc(activeStayRef);
