@@ -62,28 +62,6 @@ export default function HomePage() {
     Autoplay({ delay: 4000, stopOnInteraction: true, stopOnMouseEnter: true })
   );
   
-  const [logoClickCount, setLogoClickCount] = useState(0);
-  const [showSuperAdminLogin, setShowSuperAdminLogin] = useState(false);
-  const clickTimeout = useRef<NodeJS.Timeout | null>(null);
-
-  const handleLogoClick = () => {
-    if (clickTimeout.current) {
-      clearTimeout(clickTimeout.current);
-    }
-    
-    const newCount = logoClickCount + 1;
-    setLogoClickCount(newCount);
-
-    if (newCount >= 7) {
-      setShowSuperAdminLogin(true);
-      setLogoClickCount(0);
-    }
-
-    clickTimeout.current = setTimeout(() => {
-      setLogoClickCount(0);
-    }, 1500);
-  };
-
   return (
     <>
       <Suspense fallback={null}>
@@ -95,7 +73,7 @@ export default function HomePage() {
         </div>
         
         <div className="text-center mb-12">
-          <div className="flex justify-center mb-4 cursor-pointer" onClick={handleLogoClick} title="StayCentral">
+          <div className="flex justify-center mb-4">
               <Logo className="size-16" />
           </div>
           <h1 className="text-5xl font-bold font-headline">Welcome to StayCentral</h1>
@@ -108,15 +86,6 @@ export default function HomePage() {
                   </Link>
               </Button>
           </div>
-          {showSuperAdminLogin && (
-            <div className="mt-4 animate-fade-in-up">
-                  <Button size="sm" variant="destructive" asChild>
-                      <Link href="/login/super-admin">
-                          <ShieldAlert className="mr-2" /> Super Admin Login
-                      </Link>
-                  </Button>
-            </div>
-          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full max-w-6xl mt-16">
