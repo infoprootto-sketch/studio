@@ -8,9 +8,12 @@
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "deploy": "firebase deploy --only hosting",
+    "lint": "next lint --fix",
     "typecheck": "tsc --noEmit",
-    "deploy": "firebase deploy --only hosting"
+    "check-duplicates": "jscpd src --pattern \"**/*.{ts,tsx}\" --min-tokens 70 --silent",
+    "check-unused": "ts-prune",
+    "quality": "npm run lint && npm run typecheck && npm run check-duplicates"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.21.0",
