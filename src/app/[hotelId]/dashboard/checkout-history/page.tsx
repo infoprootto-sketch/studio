@@ -1,11 +1,12 @@
-
-
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { CheckoutHistoryList } from '@/components/dashboard/checkout-history-list';
-import { useRooms } from '@/context/room-context';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useHotelId } from '@/context/hotel-id-context';
+import { collection } from 'firebase/firestore';
+import type { CheckedOutStay } from '@/lib/types';
 import { isToday, isThisMonth, isWithinInterval, startOfDay, endOfDay, eachDayOfInterval, differenceInCalendarDays } from 'date-fns';
 import { CheckCircle, CalendarDays, IndianRupee, X, AreaChart, BedDouble } from 'lucide-react';
 import { useSettings } from '@/context/settings-context';
@@ -16,12 +17,26 @@ import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 
 export default function HistoryPage() {
-    const { checkoutHistory } = useRooms();
+    const firestore = useFirestore();
+    const hotelId = useHotelId();
+    const { user, isUserLoading } = useUser();
     const { formatPrice } = useSettings();
     const [isClient, setIsClient] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    
+    const checkoutHistoryCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'checkoutHistory') : null), [firestore, hotelId, user, isUserLoading]);
+    const { data: checkoutHistoryData, isLoading } = useCollection<CheckedOutStay>(checkoutHistoryCollectionRef);
+    
+    const checkoutHistory = useMemo(() => {
+        if (!checkoutHistoryData) return [];
+        return checkoutHistoryData.map(s => ({
+            ...s, 
+            checkInDate: (s.checkInDate as any)?.toDate ? (s.checkInDate as any).toDate() : new Date(s.checkInDate), 
+            checkOutDate: (s.checkOutDate as any)?.toDate ? (s.checkOutDate as any).toDate() : new Date(s.checkOutDate)
+        }));
+    }, [checkoutHistoryData]);
 
     useEffect(() => {
         setIsClient(true);

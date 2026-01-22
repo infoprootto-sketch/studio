@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
@@ -9,14 +8,33 @@ import type { CorporateClient, BilledOrder, CheckedOutStay } from '@/lib/types';
 import { CorporateClientList } from '@/components/dashboard/corporate-client-list';
 import { EditCorporateClientDialog } from '@/components/dashboard/edit-corporate-client-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useRooms } from '@/context/room-context';
 import { StayHistoryDialog } from '@/components/dashboard/stay-history-dialog';
 import { ClientBillingHistoryDialog } from '@/components/dashboard/client-billing-history-dialog';
 import { useBilling } from '@/context/billing-context';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useHotelId } from '@/context/hotel-id-context';
+import { collection } from 'firebase/firestore';
+
 
 export default function BillingPage() {
     const { corporateClients, addClient, updateClient, deleteClient, updateBilledOrder } = useBilling();
-    const { checkoutHistory } = useRooms();
+    
+    const firestore = useFirestore();
+    const hotelId = useHotelId();
+    const { user, isUserLoading } = useUser();
+    
+    const checkoutHistoryCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'checkoutHistory') : null), [firestore, hotelId, user, isUserLoading]);
+    const { data: checkoutHistoryData, isLoading } = useCollection<CheckedOutStay>(checkoutHistoryCollectionRef);
+    
+    const checkoutHistory = useMemo(() => {
+        if (!checkoutHistoryData) return [];
+        return checkoutHistoryData.map(s => ({
+            ...s, 
+            checkInDate: (s.checkInDate as any)?.toDate ? (s.checkInDate as any).toDate() : new Date(s.checkInDate), 
+            checkOutDate: (s.checkOutDate as any)?.toDate ? (s.checkOutDate as any).toDate() : new Date(s.checkOutDate)
+        }));
+    }, [checkoutHistoryData]);
+
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
     const [isBillingHistoryOpen, setIsBillingHistoryOpen] = useState(false);
@@ -133,4 +151,3 @@ export default function BillingPage() {
         </>
     );
 }
-

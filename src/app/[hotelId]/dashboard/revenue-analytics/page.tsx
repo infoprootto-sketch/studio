@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo, useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,20 +12,39 @@ import { CombinedAnalyticsReport } from '@/components/dashboard/combined-analyti
 import type { ChartDataPoint } from '@/components/dashboard/revenue-chart';
 import type { RevenueAnalyticsData, ServiceAnalyticsData, OccupancyAnalyticsData } from '@/components/dashboard/combined-analytics-report';
 import { useBilling } from '@/context/billing-context';
-import type { Room, Stay, ServiceRequest } from '@/lib/types';
+import type { Room, Stay, ServiceRequest, CheckedOutStay } from '@/lib/types';
 import { useSettings } from '@/context/settings-context';
 import type { DateRange } from 'react-day-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useHotelId } from '@/context/hotel-id-context';
+import { collection } from 'firebase/firestore';
 
 
 export default function RevenueAnalyticsPage() {
-    const { rooms, roomCategories, checkoutHistory } = useRooms();
+    const { rooms, roomCategories } = useRooms();
     const { serviceRequests, restaurants } = useServices();
     const { corporateClients } = useBilling();
     const { gstRate, serviceChargeRate, formatPrice } = useSettings();
     const [isClient, setIsClient] = useState(false);
+    
+    const firestore = useFirestore();
+    const hotelId = useHotelId();
+    const { user, isUserLoading } = useUser();
+    
+    const checkoutHistoryCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'checkoutHistory') : null), [firestore, hotelId, user, isUserLoading]);
+    const { data: checkoutHistoryData } = useCollection<CheckedOutStay>(checkoutHistoryCollectionRef);
+    
+    const checkoutHistory = useMemo(() => {
+        if (!checkoutHistoryData) return [];
+        return checkoutHistoryData.map(s => ({
+            ...s, 
+            checkInDate: (s.checkInDate as any)?.toDate ? (s.checkInDate as any).toDate() : new Date(s.checkInDate), 
+            checkOutDate: (s.checkOutDate as any)?.toDate ? (s.checkOutDate as any).toDate() : new Date(s.checkOutDate)
+        }));
+    }, [checkoutHistoryData]);
 
     useEffect(() => {
         setIsClient(true);

@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
@@ -43,7 +41,6 @@ interface Movement {
 // Split contexts for performance optimization
 interface RoomStateContextType {
   rooms: Room[];
-  checkoutHistory: CheckedOutStay[];
   roomCategories: RoomCategory[];
   todaysArrivals: Movement[];
   todaysDepartures: Movement[];
@@ -88,7 +85,6 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
   }, []);
 
   const roomsCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'rooms') : null), [firestore, hotelId, user, isUserLoading]);
-  const checkoutHistoryCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'checkoutHistory') : null), [firestore, hotelId, user, isUserLoading]);
   const roomCategoriesCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'roomCategories') : null), [firestore, hotelId, user, isUserLoading]);
 
   const { data: firestoreRooms } = useCollection<Room>(roomsCollectionRef);
@@ -127,10 +123,8 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
   }, [baseRooms, isClient]);
 
 
-  const { data: checkoutHistoryData } = useCollection<CheckedOutStay>(checkoutHistoryCollectionRef);
   const { data: roomCategoriesData } = useCollection<RoomCategory>(roomCategoriesCollectionRef);
 
-  const checkoutHistory = useMemo(() => (checkoutHistoryData || []).map(s => ({...s, checkInDate: (s.checkInDate as any)?.toDate ? (s.checkInDate as any).toDate() : new Date(s.checkInDate), checkOutDate: (s.checkOutDate as any)?.toDate ? (s.checkOutDate as any).toDate() : new Date(s.checkOutDate)})), [checkoutHistoryData]);
   const roomCategories = useMemo(() => roomCategoriesData || [], [roomCategoriesData]);
 
   const { todaysArrivals, todaysDepartures } = useMemo(() => {
@@ -662,7 +656,6 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
 
   const stateValue: RoomStateContextType = useMemo(() => ({
     rooms,
-    checkoutHistory,
     roomCategories,
     todaysArrivals,
     todaysDepartures,
@@ -671,7 +664,7 @@ const RoomProviderInternal = React.memo(({ children }: { children: ReactNode }) 
     selectedStayId,
     selectedDate,
     dialogAction
-  }), [rooms, checkoutHistory, roomCategories, todaysArrivals, todaysDepartures, isManageRoomOpen, selectedRoom, selectedStayId, selectedDate, dialogAction]);
+  }), [rooms, roomCategories, todaysArrivals, todaysDepartures, isManageRoomOpen, selectedRoom, selectedStayId, selectedDate, dialogAction]);
 
   const actionsValue: RoomActionsContextType = useMemo(() => ({
     updateRoom,
