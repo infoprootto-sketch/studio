@@ -126,9 +126,10 @@ service cloud.firestore {
     
     // Special case for TeamMembers due to owner-only read access
     match /hotels/{hotelId}/teamMembers/{memberId} {
-      // isDataOwner allows a user to read their own profile, breaking the loop for `isHotelAdmin`'s check.
-      // isHotelOwner can now safely get the hotel doc to check the ownerUids array.
-      allow get: if isDataOwner(memberId) || isHotelOwner(hotelId);
+      // PHASE 1 FIX: The recursive loop is broken here. An admin's ability to read another
+      // member's profile now comes from a non-recursive check of their *own* role,
+      // which is permitted by `isDataOwner`. The call to `isHotelOwner` is removed.
+      allow get: if isDataOwner(memberId) || (request.auth != null && get(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid)).data.role == 'Admin');
       allow create, update, delete: if isHotelAdmin(hotelId);
     }
 
