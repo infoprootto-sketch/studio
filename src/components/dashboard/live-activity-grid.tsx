@@ -22,6 +22,7 @@ import { useUser } from '@/firebase';
 import { useInventory } from '@/context/inventory-context';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useAdminBillingCalculator } from '@/hooks/use-admin-billing-calculator';
 
 
 type CartItem = {
@@ -73,6 +74,7 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
    const { teamMembers, departments, slaRules } = useTeam();
    const { inventory, updateInventoryItem, addStockMovement } = useInventory();
    const { user } = useUser();
+   const { getBillSummary } = useAdminBillingCalculator();
 
   const { gstRate, serviceChargeRate, formatPrice } = useSettings();
   const [searchQuery, setSearchQuery] = useState('');
@@ -291,44 +293,6 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
     ? serviceRequests.filter(req => req.stayId === selectedRoomForDialogs.stayId)
     : [];
 
-    
- const getRoomBalance = useMemo(() => (room: Room, stayId?: string): number => {
-    if (!stayId || !rooms || !serviceRequests) return 0;
-
-    const currentStay = room.stays.find(s => s.stayId === stayId);
-    if (!currentStay) return 0;
-    
-    let staysToBill: Stay[] = [currentStay];
-    let serviceRequestsToBill: ServiceRequest[] = serviceRequests.filter(req => req.stayId === stayId);
-    
-    // If it's a clubbed group booking, find all associated stays and their service requests
-    if (currentStay.isGroupBooking && currentStay.groupMasterStayId) {
-        staysToBill = [];
-        const allGroupStays = rooms.flatMap(r => r.stays.filter(s => s.groupMasterStayId === currentStay.groupMasterStayId));
-        staysToBill = allGroupStays;
-        const allGroupStayIds = allGroupStays.map(s => s.stayId);
-        serviceRequestsToBill = serviceRequests.filter(req => req.stayId && allGroupStayIds.includes(req.stayId));
-    }
-    
-    const totalRoomCharge = staysToBill.reduce((total, stay) => {
-        const nights = differenceInCalendarDays(new Date(stay.checkOutDate), new Date(stay.checkInDate)) || 1;
-        return total + (stay.roomCharge * nights);
-    }, 0);
-    
-    const totalServicesCharge = serviceRequestsToBill.reduce((sum, item) => sum + (item.price || 0), 0);
-    
-    const subtotal = totalRoomCharge + totalServicesCharge;
-    const serviceChargeAmount = (subtotal * serviceChargeRate) / 100;
-    const gstAmount = (subtotal * gstRate) / 100;
-    const totalWithTaxes = subtotal + serviceChargeAmount + gstAmount;
-
-    const totalPaidAmount = staysToBill.reduce((total, stay) => total + (stay.paidAmount || 0), 0);
-
-    const currentBalance = totalWithTaxes - totalPaidAmount;
-    
-    return currentBalance;
-  }, [rooms, serviceRequests, gstRate, serviceChargeRate]);
-
    const { todaysDepartures, expectedRevenue } = useMemo(() => {
     if (!isClient) return { todaysDepartures: [], expectedRevenue: 0 };
 
@@ -338,13 +302,20 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
       isToday(new Date(room.stays.find(s => s.stayId === room.stayId)?.checkOutDate || ''))
     );
     
-    const revenue = departures.reduce((sum, room) => sum + getRoomBalance(room, room.stayId), 0);
+    const revenue = departures.reduce((sum, room) => {
+      const stay = room.stays.find(s => s.stayId === room.stayId);
+      if (stay) {
+        const { currentBalance } = getBillSummary(stay, room);
+        return sum + currentBalance;
+      }
+      return sum;
+    }, 0);
     
     return {
       todaysDepartures: departures,
       expectedRevenue: revenue,
     };
-  }, [rooms, getRoomBalance, isClient]);
+  }, [rooms, isClient, getBillSummary]);
 
 
   if (occupiedCount === 0 && todaysDepartures.length === 0) {
@@ -401,19 +372,23 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
                     </AccordionTrigger>
                     <AccordionContent className="p-4 border-t">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {departingToday.map(room => (
-                                <LiveActivityRoomCard
-                                    key={room.id}
-                                    room={room}
-                                    role={role}
-                                    balance={getRoomBalance(room, room.stayId)}
-                                    hasSlaBreach={hasSlaBreach(room.number)}
-                                    onAddCharge={() => handleOpenChargeDialog(room)}
-                                    onViewLog={() => handleOpenLogDialog(room)}
-                                    onGenerateBill={() => handleOpenBillSheet(room)}
-                                    onManageStay={() => openManageRoom(room, room.stayId)}
-                                />
-                            ))}
+                            {departingToday.map(room => {
+                                const stay = room.stays.find(s => s.stayId === room.stayId);
+                                const balance = stay ? getBillSummary(stay, room).currentBalance : 0;
+                                return (
+                                    <LiveActivityRoomCard
+                                        key={room.id}
+                                        room={room}
+                                        role={role}
+                                        balance={balance}
+                                        hasSlaBreach={hasSlaBreach(room.number)}
+                                        onAddCharge={() => handleOpenChargeDialog(room)}
+                                        onViewLog={() => handleOpenLogDialog(room)}
+                                        onGenerateBill={() => handleOpenBillSheet(room)}
+                                        onManageStay={() => openManageRoom(room, room.stayId)}
+                                    />
+                                );
+                            })}
                         </div>
                     </AccordionContent>
                 </AccordionItem>
@@ -428,19 +403,23 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
                     </AccordionTrigger>
                     <AccordionContent className="p-4 border-t">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {departingTomorrow.map(room => (
-                                <LiveActivityRoomCard
-                                    key={room.id}
-                                    room={room}
-                                    role={role}
-                                    balance={getRoomBalance(room, room.stayId)}
-                                    hasSlaBreach={hasSlaBreach(room.number)}
-                                    onAddCharge={() => handleOpenChargeDialog(room)}
-                                    onViewLog={() => handleOpenLogDialog(room)}
-                                    onGenerateBill={() => handleOpenBillSheet(room)}
-                                    onManageStay={() => openManageRoom(room, room.stayId)}
-                                />
-                            ))}
+                            {departingTomorrow.map(room => {
+                                const stay = room.stays.find(s => s.stayId === room.stayId);
+                                const balance = stay ? getBillSummary(stay, room).currentBalance : 0;
+                                return (
+                                    <LiveActivityRoomCard
+                                        key={room.id}
+                                        room={room}
+                                        role={role}
+                                        balance={balance}
+                                        hasSlaBreach={hasSlaBreach(room.number)}
+                                        onAddCharge={() => handleOpenChargeDialog(room)}
+                                        onViewLog={() => handleOpenLogDialog(room)}
+                                        onGenerateBill={() => handleOpenBillSheet(room)}
+                                        onManageStay={() => openManageRoom(room, room.stayId)}
+                                    />
+                                );
+                            })}
                         </div>
                     </AccordionContent>
                 </AccordionItem>
@@ -455,19 +434,23 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
                     </AccordionTrigger>
                     <AccordionContent className="p-4 border-t">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {departingLater.map(room => (
-                                <LiveActivityRoomCard
-                                    key={room.id}
-                                    room={room}
-                                    role={role}
-                                    balance={getRoomBalance(room, room.stayId)}
-                                    hasSlaBreach={hasSlaBreach(room.number)}
-                                    onAddCharge={() => handleOpenChargeDialog(room)}
-                                    onViewLog={() => handleOpenLogDialog(room)}
-                                    onGenerateBill={() => handleOpenBillSheet(room)}
-                                    onManageStay={() => openManageRoom(room, room.stayId)}
-                                />
-                            ))}
+                            {departingLater.map(room => {
+                                const stay = room.stays.find(s => s.stayId === room.stayId);
+                                const balance = stay ? getBillSummary(stay, room).currentBalance : 0;
+                                return (
+                                    <LiveActivityRoomCard
+                                        key={room.id}
+                                        room={room}
+                                        role={role}
+                                        balance={balance}
+                                        hasSlaBreach={hasSlaBreach(room.number)}
+                                        onAddCharge={() => handleOpenChargeDialog(room)}
+                                        onViewLog={() => handleOpenLogDialog(room)}
+                                        onGenerateBill={() => handleOpenBillSheet(room)}
+                                        onManageStay={() => openManageRoom(room, room.stayId)}
+                                    />
+                                );
+                            })}
                         </div>
                     </AccordionContent>
                 </AccordionItem>
