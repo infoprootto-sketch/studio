@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect, Suspense } from 'react';
 import { FranchiseSidebar } from '@/components/franchise/sidebar';
@@ -68,4 +69,3 @@ export default function FranchiseLayout({
     </HotelIdProvider>
   );
 }
-
