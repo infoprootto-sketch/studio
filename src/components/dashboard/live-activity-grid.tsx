@@ -23,44 +23,13 @@ import { useInventory } from '@/context/inventory-context';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAdminBillingCalculator } from '@/hooks/use-admin-billing-calculator';
+import { findDepartmentForCategory } from '@/lib/utils';
 
 
 type CartItem = {
   service: HotelService;
   quantity: number;
 };
-
-const findDepartmentForCategory = (
-    departments: Department[],
-    category: string | undefined,
-    restaurants: any[],
-    service: HotelService | undefined
-): string => {
-    if (!category) return 'Reception';
-
-    // 1. Direct match for the service category (e.g., "Laundry")
-    const directDept = departments.find(d => d.manages.includes(category));
-    if (directDept) return directDept.name;
-
-    // 2. If it's an F&B item, find which department manages the parent restaurant
-    if (service?.restaurantId) {
-        const parentRestaurant = restaurants.find(r => r.id === service.restaurantId);
-        if (parentRestaurant) {
-            const restaurantDept = departments.find(d => d.manages.includes(parentRestaurant.name));
-            if (restaurantDept) return restaurantDept.name;
-        }
-    }
-    
-    // 3. Fallback to a generic "F&B" department if it's an F&B item but no specific restaurant is assigned
-     if (category.startsWith('F&B:')) {
-        const fbDept = departments.find(d => d.manages.includes('F&B'));
-        if (fbDept) return fbDept.name;
-    }
-
-    // 4. Default fallback
-    return 'Reception';
-}
-
 
 
 export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager' }) {

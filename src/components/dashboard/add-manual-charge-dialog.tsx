@@ -22,6 +22,7 @@ import { Plus, Minus, ArrowLeft, X } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { useServices } from '@/context/service-context';
+import { findDepartmentForCategory } from '@/lib/utils';
 
 type CartItem = {
   service: HotelService;
@@ -33,37 +34,6 @@ interface AddManualChargeDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onAddCharges: (items: CartItem[], status: ServiceRequestStatus, department: string) => void;
-}
-
-const findDepartmentForCategory = (
-    departments: Department[],
-    category: string | undefined,
-    restaurants: any[],
-    service: HotelService | undefined
-): string => {
-    if (!category) return 'Reception';
-
-    // 1. Direct match for the service category (e.g., "Laundry")
-    const directDept = departments.find(d => d.manages.includes(category));
-    if (directDept) return directDept.name;
-
-    // 2. If it's an F&B item, find which department manages the parent restaurant
-    if (service?.restaurantId) {
-        const parentRestaurant = restaurants.find(r => r.id === service.restaurantId);
-        if (parentRestaurant) {
-            const restaurantDept = departments.find(d => d.manages.includes(parentRestaurant.name));
-            if (restaurantDept) return restaurantDept.name;
-        }
-    }
-    
-    // 3. Fallback to a generic "F&B" department if it's an F&B item but no specific restaurant is assigned
-     if (category.startsWith('F&B:')) {
-        const fbDept = departments.find(d => d.manages.includes('F&B'));
-        if (fbDept) return fbDept.name;
-    }
-
-    // 4. Default fallback
-    return 'Reception';
 }
 
 

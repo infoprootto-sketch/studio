@@ -1,7 +1,7 @@
 
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import type { Room, RoomStatus, ServiceTiming } from "./types";
+import type { Room, RoomStatus, ServiceTiming, Department, Restaurant, HotelService } from "./types";
 import { startOfDay, isWithinInterval, isBefore, parse, set } from 'date-fns';
 
 
@@ -79,3 +79,43 @@ export const isServiceAvailable = (serviceName: string, serviceTimings: ServiceT
 
     return isWithinInterval(now, { start: startTime, end: endTime });
 };
+
+
+/**
+ * Determines the correct department for a service request based on routing rules.
+ * @param departments The list of all available departments.
+ * @param category The category of the service requested.
+ * @param restaurants The list of all restaurants.
+ * @param service The full service object.
+ * @returns The name of the department responsible for the request.
+ */
+export const findDepartmentForCategory = (
+    departments: Department[],
+    category: string | undefined,
+    restaurants: Restaurant[],
+    service: HotelService | undefined
+): string => {
+    if (!category) return 'Reception';
+
+    // 1. Direct match for the service category (e.g., "Laundry")
+    const directDept = departments.find(d => d.manages.includes(category));
+    if (directDept) return directDept.name;
+
+    // 2. If it's an F&B item, find which department manages the parent restaurant
+    if (service?.restaurantId) {
+        const parentRestaurant = restaurants.find(r => r.id === service.restaurantId);
+        if (parentRestaurant) {
+            const restaurantDept = departments.find(d => d.manages.includes(parentRestaurant.name));
+            if (restaurantDept) return restaurantDept.name;
+        }
+    }
+    
+    // 3. Fallback to a generic "F&B" department if it's an F&B item but no specific restaurant is assigned
+     if (category.startsWith('F&B:')) {
+        const fbDept = departments.find(d => d.manages.includes('F&B'));
+        if (fbDept) return fbDept.name;
+    }
+
+    // 4. Default fallback
+    return 'Reception';
+}
