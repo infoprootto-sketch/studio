@@ -5,6 +5,7 @@ import { FirebaseClientProvider } from '@/firebase';
 import React from 'react';
 import { PageLoader } from '@/components/common/page-loader';
 import { ThemeProvider } from '@/components/theme-provider';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 export const metadata: Metadata = {
   title: {
@@ -66,6 +67,7 @@ export default function RootLayout({
             disableTransitionOnChange
         >
             <FirebaseClientProvider>
+                <FirebaseErrorListener />
                 {children}
                 <Toaster />
                 <React.Suspense fallback={null}>

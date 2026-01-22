@@ -12,7 +12,7 @@ interface InventoryContextType {
   inventory: InventoryItem[];
   stockMovements: StockMovement[];
   vendors: Vendor[];
-  addInventoryItem: (itemData: Omit<InventoryItem, 'id'>) => void;
+  addInventoryItem: (itemData: Omit<InventoryItem, 'id'>) => Promise<string | null>;
   updateInventoryItem: (itemId: string, updates: Partial<InventoryItem>) => void;
   deleteInventoryItem: (itemId: string) => void;
   addVendor: (vendorData: Omit<Vendor, 'id'>) => void;
@@ -60,16 +60,20 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }));
   }, [stockMovementsData]);
 
-  const addInventoryItem = (itemData: Omit<InventoryItem, 'id'>) => {
-    if (!inventoryCollectionRef) return;
-    addDoc(inventoryCollectionRef, itemData).catch(async (serverError) => {
+  const addInventoryItem = async (itemData: Omit<InventoryItem, 'id'>): Promise<string | null> => {
+    if (!inventoryCollectionRef) return null;
+    try {
+        const docRef = await addDoc(inventoryCollectionRef, itemData);
+        return docRef.id;
+    } catch (serverError) {
         const permissionError = new FirestorePermissionError({
           path: inventoryCollectionRef.path,
           operation: 'create',
           requestResourceData: itemData,
         });
         errorEmitter.emit('permission-error', permissionError);
-      });
+        return null;
+    }
   };
   
   const updateInventoryItem = (itemId: string, updates: Partial<InventoryItem>) => {

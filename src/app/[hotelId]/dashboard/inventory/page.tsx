@@ -45,9 +45,10 @@ export default function InventoryPage() {
     setIsStockDialogOpen(true);
   };
 
-  const handleSaveItem = (itemData: Partial<InventoryItem>, linkedServiceId?: string) => {
+  const handleSaveItem = async (itemData: Partial<InventoryItem>, linkedServiceId?: string) => {
     let message = '';
-    let newId = '';
+    let itemId = itemData.id;
+    
     if (itemData.id) {
       updateInventoryItem(itemData.id, itemData);
       message = `"${itemData.name}" has been updated.`;
@@ -59,14 +60,17 @@ export default function InventoryPage() {
         parLevel: itemData.parLevel!,
         unit: itemData.unit!,
       };
-      // This is not ideal as we don't get the ID back immediately.
-      // For the UI to work, we'll assume a temporary link. A better solution would involve getting the ID after creation.
-      newId = `temp-${Date.now()}`;
-      addInventoryItem(newItem);
-      message = `"${newItem.name}" has been added to the inventory.`;
+      const newId = await addInventoryItem(newItem);
+      if (newId) {
+        itemId = newId;
+        message = `"${newItem.name}" has been added to the inventory.`;
+      } else {
+        toast({ variant: 'destructive', title: 'Failed to create item' });
+        return;
+      }
     }
 
-    if (linkedServiceId) {
+    if (linkedServiceId && itemId) {
         if (linkedServiceId === 'none') {
              // If 'None' was selected, we need to find the service that was previously linked to this item and unlink it.
             const previouslyLinkedService = hotelServices.find(s => s.inventoryItemId === itemData.id);
@@ -75,7 +79,7 @@ export default function InventoryPage() {
             }
         } else {
             // Link the new service
-            updateHotelService(linkedServiceId, { inventoryItemId: itemData.id || newId });
+            updateHotelService(linkedServiceId, { inventoryItemId: itemId });
         }
     }
 
