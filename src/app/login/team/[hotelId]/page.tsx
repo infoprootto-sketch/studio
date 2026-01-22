@@ -67,21 +67,11 @@ export default function TeamMemberLoginPage() {
             const teamMemberSnap = await getDoc(teamMemberRef);
 
             if (teamMemberSnap.exists()) {
-                const memberData = teamMemberSnap.data() as TeamMember;
                 toast({
                     title: "Login Successful",
                     description: "Redirecting to your dashboard...",
                 });
-
-                let destination = `/${hotelId}/team/dashboard`; // Default
-                if (memberData.role === 'Reception') {
-                    destination = `/${hotelId}/dashboard`;
-                }
-                 if (memberData.role === 'Admin' || memberData.role === 'Owner') {
-                    destination = `/${hotelId}/dashboard`;
-                }
-                
-                router.push(destination);
+                router.push(`/${hotelId}/dashboard`);
             } else {
                  if (auth) await auth.signOut();
                  toast({
