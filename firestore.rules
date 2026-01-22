@@ -63,10 +63,8 @@ service cloud.firestore {
     // ======================================================================
     
     match /hotels/{hotelId} {
-      // CRITICAL FIX: The `read` rule is now non-recursive. It allows any team member
-      // to read the hotel doc, which in turn allows helper functions like `isHotelOwner`
-      // to work correctly when called from other rules.
-      allow read: if isTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      // CRITICAL FIX: The `read` rule now explicitly checks if the requester is the owner of the hotel document.
+      allow read: if isDataOwner(hotelId) || isTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow create: if isDataOwner(hotelId);
       allow update: if isHotelAdmin(hotelId) || isSuperAdmin();
       allow list: if isFranchiseOwner() || isSuperAdmin();
@@ -95,8 +93,9 @@ service cloud.firestore {
     // --- STAFF-ONLY & DELEGATED ACCESS COLLECTIONS ---
     match /hotels/{hotelId}/{collection}/{docId}
         where collection in ['checkoutHistory', 'departments', 'shifts', 'slaRules', 'corporateClients', 'inventory', 'vendors'] {
-        allow read, write: if isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-        allow list: if isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+        // CRITICAL FIX: Added isDataOwner to grant access to the hotel owner.
+        allow list, read: if isDataOwner(hotelId) || isHotelAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+        allow write: if isHotelAdmin(hotelId);
     }
     
     // --- Guest & Staff Shared Collections ---
@@ -115,7 +114,7 @@ service cloud.firestore {
         // Guests can read their own requests; staff can read any.
         allow get: if isTeamMember(hotelId) || isGuestOfStay(resource.data.stayId);
         // Guests can list ONLY their own requests (via a where clause); staff can list all.
-        allow list: if isTeamMember(hotelId) || isGuestOfStay(request.query.where[2]);
+        allow list: if isTeamMember(hotelId) || (isGuestOfStay(request.query.where[2]) && request.query.where[0] == 'stayId');
         allow update, delete: if isTeamMember(hotelId);
     }
 
