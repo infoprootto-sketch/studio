@@ -17,7 +17,7 @@ service cloud.firestore {
 
     function isHotelAdmin(hotelId) {
       let isOwner = isHotelOwner(hotelId);
-      // This is safe because the rule for /teamMembers/{userId} get allows isDataOwner(userId).
+      // This is now safe because the get rule for teamMembers does not cause a loop.
       let hasAdminRole = request.auth != null &&
                          exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid)) &&
                          get(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid)).data.role == 'Admin';
@@ -54,9 +54,7 @@ service cloud.firestore {
 
     match /activeStays/{stayId} {
       allow get: if true;
-      allow create: if isHotelAdmin(get(/databases/$(database)/documents/activeStays/$(stayId)).data.hotelId);
-      allow update: if isHotelAdmin(get(/databases/$(database)/documents/activeStays/$(stayId)).data.hotelId);
-      allow delete: if isHotelAdmin(get(/databases/$(database)/documents/activeStays/$(stayId)).data.hotelId);
+      allow create, update, delete: if isHotelAdmin(get(/databases/$(database)/documents/activeStays/$(stayId)).data.hotelId);
       allow list: if false;
     }
 
@@ -65,12 +63,8 @@ service cloud.firestore {
     // ======================================================================
     
     match /hotels/{hotelId} {
-      // CRITICAL FIX: The `read` rule for the hotel doc cannot call helpers that perform other reads.
-      // This new rule is self-contained and breaks the loop. It checks for direct ownership, team membership, or delegated access.
-      allow read: if (request.auth != null && (request.auth.uid == hotelId || get(/databases/$(database)/documents/hotels/$(hotelId)).data.get('ownerUids', []).hasAny([request.auth.uid]))) ||
-                     (request.auth != null && exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid))) ||
-                     hasDelegatedAccess(hotelId) || 
-                     isSuperAdmin();
+      // CRITICAL FIX: This rule is now self-contained and does not call helpers that perform other reads, breaking the loop.
+      allow read: if (request.auth != null && (request.auth.uid == hotelId || get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerUids.hasAny([request.auth.uid]))) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow create: if isDataOwner(hotelId);
       allow update: if isHotelAdmin(hotelId) || isSuperAdmin();
       allow list: if isSuperAdmin() || isFranchiseOwner();
@@ -129,7 +123,9 @@ service cloud.firestore {
     
     // Special case for TeamMembers due to owner-only read access
     match /hotels/{hotelId}/teamMembers/{memberId} {
-      allow get: if isDataOwner(memberId) || isHotelAdmin(hotelId);
+      // BREAK THE LOOP: An admin's check on their *own* role will be allowed by isDataOwner.
+      // An owner can read any member's profile via isHotelOwner.
+      allow get: if isDataOwner(memberId) || isHotelOwner(hotelId);
       allow create, update, delete: if isHotelAdmin(hotelId);
     }
 
