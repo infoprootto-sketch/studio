@@ -1,5 +1,3 @@
-
-
 'use client';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -187,73 +185,84 @@ export default function LoginPage() {
             <CardDescription>Enter your admin credentials to access your dashboard.</CardDescription>
             </CardHeader>
             <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                        <Input 
-                            id="email" 
-                            type="email" 
-                            placeholder="you@yourhotel.com" 
-                            required 
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            disabled={loading || isSuccess}
-                            className="pl-9"
-                        />
+            {firestore ? (
+              <>
+                <form onSubmit={handleLogin} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                            <Input 
+                                id="email" 
+                                type="email" 
+                                placeholder="you@yourhotel.com" 
+                                required 
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                disabled={loading || isSuccess}
+                                className="pl-9"
+                            />
+                        </div>
                     </div>
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="password">Password</Label>
+                            <Link
+                                href="/forgot-password"
+                                className="text-xs text-muted-foreground underline"
+                            >
+                                Forgot your password?
+                            </Link>
+                        </div>
+                        <div className="relative">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                            <Input 
+                                id="password" 
+                                type={showPassword ? 'text' : 'password'} 
+                                required 
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                disabled={loading || isSuccess}
+                                className="pl-9"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground"
+                            >
+                                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                            </button>
+                        </div>
+                    </div>
+                    <Button type="submit" className="w-full h-12 transition-all" disabled={loading || isSuccess}>
+                        {loading ? (
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-foreground"></div>
+                        ) : isSuccess ? (
+                            <Check className="size-6" />
+                        ) : "Login"}
+                    </Button>
+                </form>
+                <div className="mt-4 text-center text-sm">
+                    New to StayCentral?{' '}
+                    <Link href="/register" className="underline">
+                    Create a hotel account
+                    </Link>
                 </div>
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="password">Password</Label>
-                        <Link
-                            href="/forgot-password"
-                            className="text-xs text-muted-foreground underline"
-                        >
-                            Forgot your password?
-                        </Link>
-                    </div>
-                    <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                        <Input 
-                            id="password" 
-                            type={showPassword ? 'text' : 'password'} 
-                            required 
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            disabled={loading || isSuccess}
-                            className="pl-9"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground"
-                        >
-                            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                        </button>
-                    </div>
+                 <div className="mt-4 text-center text-sm">
+                    Are you a Team Member?{' '}
+                    <Link href="/login/team" className="underline">
+                    Login here
+                    </Link>
                 </div>
-                <Button type="submit" className="w-full h-12 transition-all" disabled={loading || isSuccess}>
-                    {loading ? (
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-foreground"></div>
-                    ) : isSuccess ? (
-                        <Check className="size-6" />
-                    ) : "Login"}
-                </Button>
-            </form>
-            <div className="mt-4 text-center text-sm">
-                New to StayCentral?{' '}
-                <Link href="/register" className="underline">
-                Create a hotel account
-                </Link>
-            </div>
-             <div className="mt-4 text-center text-sm">
-                Are you a Team Member?{' '}
-                <Link href="/login/team" className="underline">
-                Login here
-                </Link>
-            </div>
+              </>
+            ) : (
+              <div className="text-center py-4">
+                  <p className="text-destructive font-semibold">Database Not Connected</p>
+                  <p className="text-muted-foreground text-sm mt-2">
+                      The application cannot connect to the database. Please ensure Firebase is correctly configured and provisioned.
+                  </p>
+              </div>
+            )}
             </CardContent>
         </Card>
       </div>
