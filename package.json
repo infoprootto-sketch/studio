@@ -2,19 +2,12 @@
   "name": "nextn",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "next dev",
-    "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
-    "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build",
     "start": "next start",
     "deploy": "firebase deploy --only hosting",
-    "lint": "next lint --fix",
-    "typecheck": "tsc --noEmit",
-    "check-duplicates": "jscpd src --pattern \"**/*.{ts,tsx}\" --min-tokens 70 --silent",
-    "check-unused": "ts-prune",
-    "quality": "npm run lint && npm run typecheck && npm run check-duplicates"
+    "lint": "next lint --fix"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.27.0",

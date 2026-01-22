@@ -1,8 +1,0 @@
-# Settings to manage and configure a Firebase App Hosting backend.
-# https://firebase.google.com/docs/app-hosting/configure
-
-runConfig:
-  # This setting controls the maximum number of server instances that can run for your app.
-  # Increasing this value allows your application to automatically scale to handle more traffic.
-  # A value of 100 is a good starting point for a production application.
-  maxInstances: 100
