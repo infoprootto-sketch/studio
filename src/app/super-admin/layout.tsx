@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect, Suspense } from 'react';
 import { SuperAdminSidebar } from '@/components/super-admin/sidebar';
