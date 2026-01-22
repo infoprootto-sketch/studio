@@ -17,9 +17,9 @@
         "./src/*"
       ]
     },
-    "module": "commonjs",
+    "module": "esnext",
     "esModuleInterop": true,
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
