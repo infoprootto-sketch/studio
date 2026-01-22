@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/pagination"
 import { Input } from '@/components/ui/input';
 import { Search, CheckCircle, MoreVertical, XCircle } from 'lucide-react';
-import { useRooms } from '@/context/room-context';
+import { useRoomState, useRoomActions } from '@/context/room-context';
 import { format, isWithinInterval, startOfDay } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -103,10 +103,11 @@ function RoomCard({ room, onStatusChange, onSetOutOfOrder }: { room: Room, onSta
 }
 
 export function RoomGrid({ initialRooms }: { initialRooms: Room[]}) {
+  const { rooms: contextRooms, roomCategories } = useRoomState();
   const { 
-      rooms: contextRooms, updateRoom, roomCategories,
-      isManageRoomOpen, closeManageRoom, selectedRoom: managedRoom, selectedStayId, selectedDate, dialogAction
-  } = useRooms();
+    updateRoom,
+    isManageRoomOpen, closeManageRoom, selectedRoom: managedRoom, selectedStayId, selectedDate, dialogAction
+  } = useRoomActions();
   
   const rooms = initialRooms && initialRooms.length > 0 ? initialRooms : contextRooms;
 

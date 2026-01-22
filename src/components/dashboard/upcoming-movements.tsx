@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useRooms } from '@/context/room-context';
+import { useRoomState, useRoomActions } from '@/context/room-context';
 import { ArrowDownCircle, ArrowUpCircle, LogIn, Search, LogOut } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -27,8 +28,8 @@ export function UpcomingMovements() {
   const { 
     todaysArrivals, 
     todaysDepartures, 
-    checkInStay 
-  } = useRooms();
+  } = useRoomState();
+  const { checkInStay } = useRoomActions();
   
   const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();

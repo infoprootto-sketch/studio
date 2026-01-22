@@ -12,7 +12,7 @@ import type { RoomCategory, InventoryItem } from '@/lib/types';
 import { PlusCircle, Trash2, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
-import { useRooms } from '@/context/room-context';
+import { useRoomState, useRoomActions } from '@/context/room-context';
 
 
 interface CleaningChecklistProps {
@@ -21,7 +21,8 @@ interface CleaningChecklistProps {
 
 export function CleaningChecklist({ inventoryItems }: CleaningChecklistProps) {
   const { toast } = useToast();
-  const { roomCategories, updateCategory } = useRooms();
+  const { roomCategories } = useRoomState();
+  const { updateCategory } = useRoomActions();
 
   const handleConsumableChange = (categoryId: string, index: number, field: 'itemId' | 'quantity', value: string) => {
     const category = roomCategories.find(c => c.id === categoryId);

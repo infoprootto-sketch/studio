@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Skeleton } from '../ui/skeleton';
-import { useRooms } from '@/context/room-context';
+import { useRoomState } from '@/context/room-context';
 import type { Room, RoomCategory } from '@/lib/types';
 import { format, isWithinInterval, startOfDay, subDays } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -104,7 +104,7 @@ function OccupancySkeleton() {
 }
 
 export function OccupancyCheck() {
-  const { rooms, roomCategories } = useRooms();
+  const { rooms, roomCategories } = useRoomState();
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [isClient, setIsClient] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);

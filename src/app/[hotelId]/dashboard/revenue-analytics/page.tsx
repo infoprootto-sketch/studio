@@ -1,9 +1,10 @@
+
 'use client';
 import React, { useMemo, useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RevenuePageContent from '@/components/dashboard/revenue-page-content';
 import AnalyticsPageContent from '@/components/dashboard/analytics-page-content';
-import { useRooms } from '@/context/room-context';
+import { useRoomState } from '@/context/room-context';
 import { useServices } from '@/context/service-context';
 import { format, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths, startOfDay, endOfDay, differenceInCalendarDays, eachDayOfInterval, isToday, subDays } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,7 @@ import { collection } from 'firebase/firestore';
 
 
 export default function RevenueAnalyticsPage() {
-    const { rooms, roomCategories } = useRooms();
+    const { rooms, roomCategories } = useRoomState();
     const { serviceRequests, restaurants } = useServices();
     const { corporateClients } = useBilling();
     const { gstRate, serviceChargeRate, formatPrice } = useSettings();
@@ -299,7 +300,7 @@ export default function RevenueAnalyticsPage() {
         if (!isClient) return { todaysDepartures: [], expectedRevenue: 0 };
 
         const departures = rooms.filter(room => 
-          room.status === 'Occupied' && 
+          room.displayStatus === 'Occupied' && 
           room.stayId && 
           isToday(new Date(room.stays.find(s => s.stayId === room.stayId)?.checkOutDate || ''))
         );

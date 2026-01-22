@@ -22,7 +22,7 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ServiceQueueReport } from './service-queue-report';
 import { useSettings } from '@/context/settings-context';
-import { useRooms } from '@/context/room-context';
+import { useRoomState, useRoomActions } from '@/context/room-context';
 import { useInventory } from '@/context/inventory-context';
 
 
@@ -39,7 +39,8 @@ export function ServiceQueue({ role = 'admin' }: { role?: 'admin' | 'reception' 
     const firestore = useFirestore();
     const hotelId = useHotelId();
     const { legalName } = useSettings();
-    const { rooms, updateRoom, roomCategories } = useRooms();
+    const { rooms, roomCategories } = useRoomState();
+    const { updateRoom } = useRoomActions();
     const { inventory, updateInventoryItem, addStockMovement } = useInventory();
     
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -131,7 +132,7 @@ export function ServiceQueue({ role = 'admin' }: { role?: 'admin' | 'reception' 
     const handleAssignTask = (requestId: string, memberId: string) => {
         if (!firestore || !hotelId) return;
         const requestRef = doc(firestore, 'hotels', hotelId, 'serviceRequests', requestId);
-        updateDocumentNonBlocking(requestRef, { assignedTo: memberId, status: 'In Progress' });
+        updateDoc(requestRef, { assignedTo: memberId, status: 'In Progress' });
         const member = teamMembers?.find(m => m.id === memberId);
         toast({
             title: 'Task Assigned',
@@ -151,7 +152,7 @@ export function ServiceQueue({ role = 'admin' }: { role?: 'admin' | 'reception' 
             update.completionTime = new Date();
         }
 
-        updateDocumentNonBlocking(requestRef, update);
+        updateDoc(requestRef, update);
 
         // If a cleaning task is completed, mark the room as available and deduct inventory.
         if (request.service === 'Post-Checkout Cleaning' && newStatus === 'Completed') {

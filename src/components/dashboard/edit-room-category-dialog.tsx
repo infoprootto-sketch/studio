@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { X, Plus } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useSettings } from '@/context/settings-context';
-import { useRooms } from '@/context/room-context';
+import { useRoomActions } from '@/context/room-context';
 
 
 interface EditRoomCategoryDialogProps {

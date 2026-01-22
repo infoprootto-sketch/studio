@@ -10,22 +10,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { format } from "date-fns";
 import { Button } from "../ui/button";
 import { Printer } from "lucide-react";
-import { useRooms } from "@/context/room-context";
+import { useRoomState } from "@/context/room-context";
 import { useEffect, useMemo } from "react";
 import { Logo } from "../logo";
 import type { ServiceRequest } from "@/lib/types";
 
 export function InvoiceDetails() {
     const { stay, room, serviceLog } = useStay();
-    const { checkoutHistory } = useRooms();
+    const { rooms } = useRoomState(); // Use useRoomState here
     const { formatPrice, legalName, address, gstNumber, gstRate, serviceChargeRate } = useSettings();
 
     const historicalStay = useMemo(() => {
-        if (!stay && room?.stayId) {
-            return checkoutHistory.find(s => s.stayId === room.stayId);
-        }
-        return null;
-    }, [stay, room, checkoutHistory]);
+        // This logic is likely not needed anymore if the checkout history is fetched on its own page
+        return null; 
+    }, [stay, room]);
 
     const billDetails = useMemo(() => {
         const processBill = (currentStay: any, currentRoom: any, log: ServiceRequest[], finalBill?: any) => {

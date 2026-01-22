@@ -8,14 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { UpcomingMovements } from '@/components/dashboard/upcoming-movements';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import { useRooms } from '@/context/room-context';
+import { useRoomState } from '@/context/room-context';
 import { useHotelId } from '@/context/hotel-id-context';
 import { PendingServiceQueue } from '@/components/dashboard/pending-service-queue';
 import { OccupancyCheck } from '@/components/dashboard/occupancy-check';
 
 
 export default function DashboardPage() {
-  const { rooms } = useRooms();
+  const { rooms } = useRoomState();
   const hotelId = useHotelId();
 
   return (

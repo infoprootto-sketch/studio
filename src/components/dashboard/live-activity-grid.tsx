@@ -1,3 +1,5 @@
+
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -8,7 +10,7 @@ import { ServiceLogDialog } from './service-log-dialog';
 import { GenerateBillSheet } from './generate-bill-sheet';
 import { useToast } from '@/hooks/use-toast';
 import { differenceInCalendarDays, differenceInMinutes, isToday, isSameDay, addDays, startOfDay } from 'date-fns';
-import { useRooms } from '@/context/room-context';
+import { useRoomState, useRoomActions } from '@/context/room-context';
 import { useSettings } from '@/context/settings-context';
 import { Input } from '@/components/ui/input';
 import { Search, IndianRupee, LogOut, Calendar } from 'lucide-react';
@@ -61,10 +63,11 @@ const findDepartmentForCategory = (
 
 
 export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager' }) {
-  const { 
-    rooms, updateRoom, updateStay, archiveStay,
+  const { rooms } = useRoomState();
+  const {
+    archiveStay,
     isManageRoomOpen, closeManageRoom, openManageRoom, selectedRoom: managedRoom, selectedStayId, selectedDate, dialogAction
-   } = useRooms();
+   } = useRoomActions();
    const { hotelServices, serviceRequests, addServiceRequests, restaurants } = useServices();
    const { corporateClients, addBilledOrder } = useBilling();
    const { teamMembers, departments, slaRules } = useTeam();
@@ -232,6 +235,7 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
   };
 
   const handleMarkAsPaid = (roomId: string, stayId: string, amountPaid: number) => {
+    const { updateStay } = useRoomActions();
     const room = rooms.find(r => r.id === roomId);
     if (!room) return;
     const stay = room.stays.find(s => s.stayId === stayId);
@@ -250,6 +254,7 @@ export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager
 
   const handleBillToCompany = (room: Room, stay: Stay, companyId: string, amount: number, status: BilledOrderStatus) => {
     if (!corporateClients) return;
+    const { updateStay } = useRoomActions();
     const isPaid = status === 'Paid';
     
     const newBilledOrder: Omit<BilledOrder, 'id'> = {

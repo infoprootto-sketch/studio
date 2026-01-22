@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BedDouble, Check, XCircle, Clock, Wind, CalendarCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Room } from '@/lib/types';
-import { useRooms } from '@/context/room-context';
+import { useRoomState } from '@/context/room-context';
 import Link from 'next/link';
 import { useHotelId } from '@/context/hotel-id-context';
 
@@ -21,7 +21,7 @@ const statusConfig: Record<string, { icon: React.ElementType; color: string; bgC
 
 
 export function OverviewCards({ rooms: initialRooms }: { rooms: Room[] }) {
-    const { rooms: contextRooms } = useRooms();
+    const { rooms: contextRooms } = useRoomState();
     const rooms = initialRooms && initialRooms.length > 0 ? initialRooms : contextRooms;
     const hotelId = useHotelId();
 

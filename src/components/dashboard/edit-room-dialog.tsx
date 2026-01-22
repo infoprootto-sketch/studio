@@ -9,7 +9,7 @@ import type { Room, RoomCategory } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useRooms } from '@/context/room-context';
+import { useRoomState } from '@/context/room-context';
 
 interface EditRoomDialogProps {
   room: Partial<Room> | null;
@@ -26,7 +26,7 @@ export function EditRoomDialog({ room, roomCategories, onClose, onSave }: EditRo
   const [endNumber, setEndNumber] = useState('');
 
   const { toast } = useToast();
-  const { rooms } = useRooms();
+  const { rooms } = useRoomState();
 
   const isEditing = room && room.id;
 

@@ -15,9 +15,8 @@ import { Button } from "@/components/ui/button"
 import { Edit, ToggleLeft, ToggleRight, Loader2, Users, AlertCircle, BedDouble } from "lucide-react"
 import type { Hotel } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { useFirestore } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useFirestore, FirestorePermissionError, errorEmitter } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { EditHotelDialog } from './edit-hotel-dialog';
 import Link from 'next/link';
@@ -43,20 +42,31 @@ export function HotelListTable({ hotels, isLoading }: HotelListTableProps) {
     if (!firestore) return;
     const newStatus = hotel.status === 'Active' ? 'Disabled' : 'Active';
     const hotelRef = doc(firestore, 'hotels', hotel.id);
-    updateDocumentNonBlocking(hotelRef, { status: newStatus });
+    const updates = { status: newStatus };
     
-    if (newStatus === 'Disabled') {
-        toast({
-            title: `Hotel Disabled`,
-            description: `Logins for all users associated with "${hotel.name}" will now be blocked.`,
-            variant: "destructive"
+    updateDoc(hotelRef, updates)
+      .then(() => {
+        if (newStatus === 'Disabled') {
+            toast({
+                title: `Hotel Disabled`,
+                description: `Logins for all users associated with "${hotel.name}" will now be blocked.`,
+                variant: "destructive"
+            });
+        } else {
+            toast({
+                title: `Hotel Enabled`,
+                description: `Users associated with "${hotel.name}" can now log in.`,
+            });
+        }
+      })
+      .catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: hotelRef.path,
+          operation: 'update',
+          requestResourceData: updates,
         });
-    } else {
-        toast({
-            title: `Hotel Enabled`,
-            description: `Users associated with "${hotel.name}" can now log in.`,
-        });
-    }
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   const handleOpenEditDialog = (hotel: Hotel) => {
@@ -67,12 +77,22 @@ export function HotelListTable({ hotels, isLoading }: HotelListTableProps) {
   const handleSave = (hotelId: string, updates: Partial<Hotel>) => {
     if (!firestore) return;
     const hotelRef = doc(firestore, 'hotels', hotelId);
-    updateDocumentNonBlocking(hotelRef, updates);
-    toast({
-        title: "Hotel Updated",
-        description: "The hotel details have been successfully updated."
-    });
-    setIsEditDialogOpen(false);
+    updateDoc(hotelRef, updates)
+      .then(() => {
+        toast({
+            title: "Hotel Updated",
+            description: "The hotel details have been successfully updated."
+        });
+        setIsEditDialogOpen(false);
+      })
+      .catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: hotelRef.path,
+          operation: 'update',
+          requestResourceData: updates,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   if (isLoading) {

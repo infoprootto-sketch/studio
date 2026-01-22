@@ -4,10 +4,11 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { RoomManagementTable } from "@/components/dashboard/room-management-table";
 import { RoomCategoryManagement } from "@/components/dashboard/room-category-management";
-import { useRooms } from "@/context/room-context";
+import { useRoomState, useRoomActions } from "@/context/room-context";
 
 export default function RoomsPage() {
-    const { roomCategories, addCategory, updateCategory, deleteCategory } = useRooms();
+    const { roomCategories } = useRoomState();
+    const { addCategory, updateCategory, deleteCategory } = useRoomActions();
 
     return (
         <div className="space-y-6">

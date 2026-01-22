@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState } from 'react';
@@ -16,7 +17,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { useSettings } from '@/context/settings-context';
-import { useRooms } from '@/context/room-context';
+import { useRoomState, useRoomActions } from '@/context/room-context';
 import { Badge } from '../ui/badge';
 
 
@@ -32,7 +33,7 @@ export function RoomCategoryManagement({ categories, onAddCategory, onUpdateCate
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const { toast } = useToast();
   const { formatPrice } = useSettings();
-  const { rooms } = useRooms();
+  const { rooms } = useRoomState();
 
   const handleOpenSheet = (category?: Partial<RoomCategory>) => {
     setSelectedCategory(category || null);

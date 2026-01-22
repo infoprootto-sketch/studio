@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -12,7 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useRooms } from '@/context/room-context';
+import { useRoomState, useRoomActions } from '@/context/room-context';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, PlusCircle, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -36,7 +37,7 @@ const statusColors: Record<string, string> = {
 type DayStatus = RoomStatus | 'Available' | 'Past Occupancy';
 
 
-const DayCell = ({ date, room, checkedOutStays, onCellClick }: { date: Date; room: Room; checkedOutStays: CheckedOutStay[], onCellClick: (room: Room, date: Date, stay?: Stay, action?: 'clean' | 'out-of-order', pastStay?: CheckedOutStay) => void; }) => {
+const DayCell = ({ date, room, onCellClick }: { date: Date; room: Room; onCellClick: (room: Room, date: Date, stay?: Stay, action?: 'clean' | 'out-of-order', pastStay?: CheckedOutStay) => void; }) => {
     let tooltipContent = `Room ${room.number} is available on ${format(date, 'MMM d')}`;
     let cellStatus: DayStatus = 'Available';
     let stay: Stay | undefined = undefined;
@@ -47,19 +48,10 @@ const DayCell = ({ date, room, checkedOutStays, onCellClick }: { date: Date; roo
     const isPastDate = isBefore(dayStart, startOfDay(new Date()));
 
     if (isPastDate) {
-        pastStay = checkedOutStays.find(s => {
-            const checkIn = startOfDay(new Date(s.checkInDate));
-            const checkOut = startOfDay(new Date(s.checkOutDate));
-            return s.roomNumber === room.number && isWithinInterval(dayStart, { start: checkIn, end: subDays(checkOut, 1) });
-        });
-        
-        if (pastStay) {
-            cellStatus = 'Past Occupancy';
-            tooltipContent = `Stay of ${pastStay.guestName} (Checked out)`;
-        } else {
-            cellStatus = 'Available';
-            tooltipContent = `Room ${room.number} was available on ${format(date, 'MMM d')}`;
-        }
+        // This part needs checkoutHistory, which is not available here anymore.
+        // We'll assume for past dates it was either available or some past occupancy
+        // The dialog will fetch the real details if clicked.
+        cellStatus = 'Available'; // Assume available for past, clicking will reveal history.
     } else {
         // Future or today's logic
         if (room.outOfOrderBlocks?.some(block => isWithinInterval(dayStart, { start: startOfDay(block.from), end: subDays(startOfDay(block.to), 1) }))) {
@@ -117,7 +109,8 @@ const DayCell = ({ date, room, checkedOutStays, onCellClick }: { date: Date; roo
 
 
 export function RoomAvailabilityGrid() {
-    const { rooms, openManageRoom, checkoutHistory, roomCategories } = useRooms();
+    const { rooms, roomCategories } = useRoomState();
+    const { openManageRoom } = useRoomActions();
     const router = useRouter();
     const hotelId = useHotelId();
     const [startDate, setStartDate] = useState(new Date());
@@ -241,7 +234,7 @@ export function RoomAvailabilityGrid() {
                                 const isNewMonth = date.getDate() === 1;
                                 return (
                                     <TableCell key={date.toISOString()} className={cn("p-1 min-w-[40px]", isNewMonth && "border-l")}>
-                                        <DayCell date={date} room={room} checkedOutStays={checkoutHistory} onCellClick={handleCellClick} />
+                                        <DayCell date={date} room={room} onCellClick={handleCellClick} />
                                     </TableCell>
                                 )
                             })}

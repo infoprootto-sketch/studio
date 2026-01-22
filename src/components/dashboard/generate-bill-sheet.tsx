@@ -20,7 +20,7 @@ import { Separator } from '@/components/ui/separator';
 import type { Room, ServiceRequest, CorporateClient, Stay, BilledOrderStatus } from '@/lib/types';
 import { useSettings } from '@/context/settings-context';
 import { differenceInCalendarDays } from 'date-fns';
-import { useRooms } from '@/context/room-context';
+import { useRoomState, useRoomActions } from '@/context/room-context';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Info, IndianRupee, AlertTriangle } from 'lucide-react';
@@ -42,7 +42,8 @@ type DiscountType = 'percent' | 'amount';
 export function GenerateBillSheet({ room, serviceLog, isOpen, onClose, onMarkAsPaid, onBillToCompany }: GenerateBillSheetProps) {
   const { gstRate, serviceChargeRate, formatPrice, currency } = useSettings();
   const { corporateClients } = useBilling();
-  const { archiveStay, rooms, forceCheckout } = useRooms();
+  const { rooms } = useRoomState();
+  const { archiveStay, forceCheckout } = useRoomActions();
   
   const stay = room?.stayId ? rooms.find(r => r.id === room.id)?.stays.find(s => s.stayId === room?.stayId) : undefined;
 
