@@ -75,9 +75,9 @@ export default function TeamMemberLoginPage() {
 
                 let destination = `/${hotelId}/team/dashboard`; // Default
                 if (memberData.role === 'Reception') {
-                    destination = `/${hotelId}/reception/dashboard`;
+                    destination = `/${hotelId}/dashboard`;
                 }
-                 if (memberData.role === 'Admin') {
+                 if (memberData.role === 'Admin' || memberData.role === 'Owner') {
                     destination = `/${hotelId}/dashboard`;
                 }
                 
