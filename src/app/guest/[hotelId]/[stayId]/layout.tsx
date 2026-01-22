@@ -11,6 +11,8 @@ import { usePathname, useParams } from 'next/navigation';
 import React from 'react';
 import { InventoryProvider } from "@/context/inventory-context";
 import { BroadcastBanner } from "@/components/guest/broadcast-banner";
+import { useFirestore } from "@/firebase";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export default function GuestLayout({
   children,
@@ -21,8 +23,24 @@ export default function GuestLayout({
   const params = useParams();
   const stayId = params.stayId as string;
   const hotelId = params.hotelId as string;
+  const firestore = useFirestore();
   
   const isHomePage = pathname === `/guest/${hotelId}/${stayId}/`;
+
+  if (!firestore) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40 p-4">
+        <Card className="w-full max-w-lg text-center">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold">Services Unavailable</CardTitle>
+            <CardDescription>
+              The hotel's digital services are temporarily unavailable. Please contact the front desk for assistance.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <HotelIdProvider hotelId={hotelId}>

@@ -3,7 +3,7 @@
 
 import React, { useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { PageLoader } from '@/components/common/page-loader';
 import { AppSidebar } from '@/components/common/sidebar';
 import { Header } from '@/components/common/header';
@@ -14,6 +14,7 @@ import { TeamProvider } from '@/context/team-context';
 import { BillingProvider } from '@/context/billing-context';
 import { InventoryProvider } from '@/context/inventory-context';
 import { SettingsProvider } from '@/context/settings-context';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function DashboardLayout({ 
   children, 
@@ -23,6 +24,7 @@ export default function DashboardLayout({
   params: { hotelId: string }
 }) {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
 
   useEffect(() => {
@@ -39,6 +41,21 @@ export default function DashboardLayout({
       <Suspense fallback={null}>
         <PageLoader />
       </Suspense>
+    );
+  }
+
+  if (!firestore) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40 p-4">
+        <Card className="w-full max-w-lg text-center">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold">Database Not Connected</CardTitle>
+            <CardDescription>
+              The application cannot connect to the Firestore database. Please ensure the database is provisioned in your Firebase project and that the project configuration is correct.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
     );
   }
 

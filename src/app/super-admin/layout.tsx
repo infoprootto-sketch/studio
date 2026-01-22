@@ -3,7 +3,7 @@ import React, { useEffect, Suspense } from 'react';
 import { SuperAdminSidebar } from '@/components/super-admin/sidebar';
 import { Header } from '@/components/common/header';
 import { HotelIdProvider } from '@/context/hotel-id-context';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { PageLoader } from '@/components/common/page-loader';
 import { SettingsProvider } from '@/context/settings-context';
@@ -12,6 +12,7 @@ import { ServiceProvider } from '@/context/service-context';
 import { TeamProvider } from '@/context/team-context';
 import { BillingProvider } from '@/context/billing-context';
 import { RoomProvider } from '@/context/room-context';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function SuperAdminLayout({ 
   children,
@@ -19,6 +20,7 @@ export default function SuperAdminLayout({
   children: React.ReactNode,
 }) {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
 
   useEffect(() => {
@@ -40,6 +42,21 @@ export default function SuperAdminLayout({
       <Suspense fallback={null}>
         <PageLoader />
       </Suspense>
+    );
+  }
+
+  if (!firestore) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40 p-4">
+        <Card className="w-full max-w-lg text-center">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold">Database Not Connected</CardTitle>
+            <CardDescription>
+              The application cannot connect to the Firestore database. Please ensure the database is provisioned in your Firebase project.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
     );
   }
   

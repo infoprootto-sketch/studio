@@ -3,9 +3,10 @@ import React, { useEffect, Suspense } from 'react';
 import { FranchiseSidebar } from '@/components/franchise/sidebar';
 import { Header } from '@/components/common/header';
 import { HotelIdProvider } from '@/context/hotel-id-context';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { PageLoader } from '@/components/common/page-loader';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 
 export default function FranchiseLayout({ 
@@ -14,6 +15,7 @@ export default function FranchiseLayout({
   children: React.ReactNode,
 }) {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
 
   useEffect(() => {
@@ -30,6 +32,21 @@ export default function FranchiseLayout({
       <Suspense fallback={null}>
         <PageLoader />
       </Suspense>
+    );
+  }
+
+  if (!firestore) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40 p-4">
+        <Card className="w-full max-w-lg text-center">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold">Database Not Connected</CardTitle>
+            <CardDescription>
+              The application cannot connect to the Firestore database. Please ensure the database is provisioned in your Firebase project.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
     );
   }
   
