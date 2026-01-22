@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -50,8 +51,8 @@ export function ClientBillingHistoryDialog({ client, isOpen, onClose, onMarkOrde
       orders = orders.filter(order => order.status === statusFilter);
     }
     
-    if (dateRange?.from && dateRange.to) {
-        const interval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) };
+    if (dateRange?.from) {
+        const interval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to || dateRange.from) };
         orders = orders.filter(order => isWithinInterval(order.date, interval));
     }
 

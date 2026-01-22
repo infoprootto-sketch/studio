@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -17,15 +18,34 @@ import { collection } from 'firebase/firestore';
 
 
 export default function BillingPage() {
-    const { corporateClients, addClient, updateClient, deleteClient, updateBilledOrder } = useBilling();
+    const { addClient, updateClient, deleteClient, updateBilledOrder } = useBilling();
     
     const firestore = useFirestore();
     const hotelId = useHotelId();
     const { user, isUserLoading } = useUser();
     
     const checkoutHistoryCollectionRef = useMemoFirebase(() => (firestore && hotelId && user && !isUserLoading ? collection(firestore, 'hotels', hotelId, 'checkoutHistory') : null), [firestore, hotelId, user, isUserLoading]);
-    const { data: checkoutHistoryData, isLoading } = useCollection<CheckedOutStay>(checkoutHistoryCollectionRef);
+    const { data: checkoutHistoryData } = useCollection<CheckedOutStay>(checkoutHistoryCollectionRef);
     
+    const clientsCollectionRef = useMemoFirebase(
+      () => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'corporateClients') : null),
+      [firestore, hotelId]
+    );
+    const { data: rawCorporateClients = [] } = useCollection<CorporateClient>(clientsCollectionRef);
+
+    const corporateClients = useMemo(() => {
+        if (!rawCorporateClients) return [];
+        return rawCorporateClients.map(client => ({
+        ...client,
+        billedOrders: (client.billedOrders || []).map(order => ({
+            ...order,
+            date: (order.date as any)?.toDate ? (order.date as any).toDate() : new Date(order.date),
+            paidDate: order.paidDate && ((order.paidDate as any)?.toDate ? (order.paidDate as any).toDate() : new Date(order.paidDate)),
+        })),
+        }));
+    }, [rawCorporateClients]);
+
+
     const checkoutHistory = useMemo(() => {
         if (!checkoutHistoryData) return [];
         return checkoutHistoryData.map(s => ({
@@ -102,7 +122,7 @@ export default function BillingPage() {
     };
 
     const handleMarkOrderAsPaid = (clientId: string, orderId: string) => {
-        updateBilledOrder(clientId, orderId, { status: 'Paid' });
+        updateBilledOrder(clientId, orderId, { status: 'Paid' }, corporateClients);
         toast({ title: "Order Paid", description: "The order has been marked as paid." });
     };
 
