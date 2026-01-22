@@ -63,7 +63,7 @@ service cloud.firestore {
     // ======================================================================
     
     match /hotels/{hotelId} {
-      // CRITICAL FIX: The `read` rule now explicitly checks if the requester is the owner of the hotel document.
+      // The `read` rule now explicitly checks if the requester is the owner of the hotel document.
       allow read: if isDataOwner(hotelId) || isTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow create: if isDataOwner(hotelId);
       allow update: if isHotelAdmin(hotelId) || isSuperAdmin();
