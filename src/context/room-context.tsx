@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
@@ -771,12 +772,4 @@ export function useRoomActions() {
     return context;
 }
 
-// Deprecated: use useRoomState or useRoomActions instead
-export function useRooms() {
-  const stateContext = useContext(RoomStateContext);
-  const actionsContext = useContext(RoomActionsContext);
-  if (stateContext === undefined || actionsContext === undefined) {
-    throw new Error('useRooms must be used within a RoomProvider');
-  }
-  return { ...stateContext, ...actionsContext };
-}
+    

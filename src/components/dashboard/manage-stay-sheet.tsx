@@ -24,7 +24,7 @@ import { Calendar as CalendarIcon, Check, Wind, XCircle, Trash2, LogIn, Clipboar
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
 import { useSettings } from '@/context/settings-context';
-import { useRooms } from '@/context/room-context';
+import { useRoomActions } from '@/context/room-context';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import { useRouter } from 'next/navigation';
 import { useHotelId } from '@/context/hotel-id-context';
@@ -60,7 +60,7 @@ const getNextStatuses = (currentStatus?: RoomStatus): RoomStatus[] => {
 }
 
 export function ManageStaySheet({ room: roomProp, rooms, stayId: stayIdProp, isOpen, onClose, action = 'check-in', initialDate }: ManageStaySheetProps) {
-  const { addStay, updateStay, removeStay, updateRoom, checkInStay } = useRooms();
+  const { addStay, updateStay, removeStay, updateRoom, checkInStay } = useRoomActions();
 
   const [status, setStatus] = useState<RoomStatus | undefined>();
   const [guestName, setGuestName] = useState('');
@@ -340,3 +340,5 @@ export function ManageStaySheet({ room: roomProp, rooms, stayId: stayIdProp, isO
     </Sheet>
   );
 }
+
+    
