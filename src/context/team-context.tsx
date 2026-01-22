@@ -1,11 +1,11 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
 import type { TeamMember, Department, Shift, SlaRule, AttendanceRecord, Hotel } from '@/lib/types';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { useHotelId } from './hotel-id-context';
-import { collection, doc, writeBatch, runTransaction, getDoc, query, where, increment } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc, writeBatch, runTransaction, getDoc, query, where, increment, addDoc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp } from 'firebase/app';
@@ -81,7 +81,6 @@ export function TeamProvider({ children }: { children: ReactNode }) {
             return;
         }
 
-        // Only provision if the current user is the hotel owner
         if (user.uid === hotelId) {
             const ownerInTeam = teamMembers.some(m => m.id === user.uid);
             if (!ownerInTeam) {
@@ -105,7 +104,15 @@ export function TeamProvider({ children }: { children: ReactNode }) {
                         attendanceStatus: 'Clocked Out',
                     };
 
-                    await setDocumentNonBlocking(memberDocRef, newMemberProfile, { merge: true });
+                    setDoc(memberDocRef, newMemberProfile, { merge: true }).catch(async (serverError) => {
+                        const permissionError = new FirestorePermissionError({
+                            path: memberDocRef.path,
+                            operation: 'create',
+                            requestResourceData: newMemberProfile,
+                        });
+                        errorEmitter.emit('permission-error', permissionError);
+                    });
+
                     toast({
                         title: "Admin Profile Created",
                         description: "A team member profile for you has been automatically created.",
@@ -121,23 +128,25 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const saveTeamMember = async (memberData: Partial<TeamMember>, password?: string): Promise<boolean> => {
     if (!firestore || !hotelId || !auth) return false;
 
-    // Handle editing an existing member
     if (memberData.id) {
         const memberRef = doc(firestore, 'hotels', hotelId, 'teamMembers', memberData.id);
-        updateDocumentNonBlocking(memberRef, { ...memberData, restaurantId: memberData.restaurantId || null });
+        updateDoc(memberRef, { ...memberData, restaurantId: memberData.restaurantId || null }).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: memberRef.path,
+                operation: 'update',
+                requestResourceData: { ...memberData, restaurantId: memberData.restaurantId || null }
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
         return true;
     }
 
-    // Handle new member creation
     if (!memberData.id && password && memberData.email) {
         if (!user) {
             toast({ variant: "destructive", title: "Authentication Error", description: "Admin user not found. Please log in again." });
             return false;
         }
 
-        const adminUid = user.uid;
-
-        // Use a temporary Firebase app to avoid logging out the admin
         const tempAppName = `user-creation-${Date.now()}`;
         const tempApp = initializeApp(firebaseConfig, tempAppName);
         const tempAuth = getAuth(tempApp);
@@ -146,8 +155,6 @@ export function TeamProvider({ children }: { children: ReactNode }) {
             const userCredential = await createUserWithEmailAndPassword(tempAuth, memberData.email, password);
             const newUserId = userCredential.user.uid;
 
-            // Now, write the new member's profile to Firestore.
-            // This operation is performed by the admin's original authenticated session.
             const memberRef = doc(firestore, 'hotels', hotelId, 'teamMembers', newUserId);
             const hotelRef = doc(firestore, 'hotels', hotelId);
 
@@ -171,8 +178,6 @@ export function TeamProvider({ children }: { children: ReactNode }) {
               transaction.update(hotelRef, updates);
             });
             
-            // The temp app automatically signs in the new user, but in an isolated instance.
-            // The admin's session remains active in the main app.
             return true;
 
         } catch (error: any) {
@@ -206,7 +211,6 @@ export function TeamProvider({ children }: { children: ReactNode }) {
               if (!memberDoc.exists()) throw new Error("Member not found");
               const memberData = memberDoc.data() as TeamMember;
 
-              // Delete the member and update the hotel doc
               transaction.delete(memberRef);
               
               const updates: Partial<Hotel> = { teamSize: increment(-1) };
@@ -224,19 +228,39 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   const addDepartment = (departmentData: Omit<Department, 'id'>) => {
     if (!departmentsCollectionRef) return;
-    addDocumentNonBlocking(departmentsCollectionRef, departmentData);
+    addDoc(departmentsCollectionRef, departmentData).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: departmentsCollectionRef.path,
+            operation: 'create',
+            requestResourceData: departmentData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
   
   const updateDepartment = (departmentId: string, updates: Partial<Department>) => {
     if (!firestore || !hotelId) return;
     const departmentRef = doc(firestore, 'hotels', hotelId, 'departments', departmentId);
-    updateDocumentNonBlocking(departmentRef, updates);
+    updateDoc(departmentRef, updates).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: departmentRef.path,
+            operation: 'update',
+            requestResourceData: updates,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
 
   const deleteDepartment = (departmentId: string) => {
     if (!firestore || !hotelId) return;
     const departmentRef = doc(firestore, 'hotels', hotelId, 'departments', departmentId);
-    deleteDocumentNonBlocking(departmentRef);
+    deleteDoc(departmentRef).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: departmentRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
   
   const reassignMembersAndDeleteDepartment = async (oldDeptName: string, newDeptName: string) => {
@@ -244,62 +268,105 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
     const batch = writeBatch(firestore);
 
-    // Find members to reassign
     const membersToReassign = teamMembers.filter(m => m.department === oldDeptName);
     membersToReassign.forEach(member => {
         const memberRef = doc(firestore, 'hotels', hotelId, 'teamMembers', member.id);
         batch.update(memberRef, { department: newDeptName });
     });
     
-    // Check if the new department exists. If not, create it.
     let newDeptExists = departments?.some(d => d.name === newDeptName);
     if (!newDeptExists) {
-      const newDeptRef = doc(departmentsCollectionRef); // Auto-generates ID
+      const newDeptRef = doc(departmentsCollectionRef);
       batch.set(newDeptRef, { name: newDeptName, manages: [] });
     }
     
-    // Delete the old department
     const oldDept = departments?.find(d => d.name === oldDeptName);
     if (oldDept) {
         const oldDeptRef = doc(firestore, 'hotels', hotelId, 'departments', oldDept.id);
         batch.delete(oldDeptRef);
     }
     
-    await batch.commit();
+    await batch.commit().catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'batch-operation',
+            operation: 'write'
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   }
 
   const addShift = (shiftData: Omit<Shift, 'id'>) => {
     if (!shiftsCollectionRef) return;
-    addDocumentNonBlocking(shiftsCollectionRef, shiftData);
+    addDoc(shiftsCollectionRef, shiftData).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: shiftsCollectionRef.path,
+            operation: 'create',
+            requestResourceData: shiftData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
 
   const updateShift = (shiftId: string, updates: Partial<Shift>) => {
     if (!firestore || !hotelId) return;
     const shiftRef = doc(firestore, 'hotels', hotelId, 'shifts', shiftId);
-    updateDocumentNonBlocking(shiftRef, updates);
+    updateDoc(shiftRef, updates).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: shiftRef.path,
+            operation: 'update',
+            requestResourceData: updates,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
 
   const deleteShift = (shiftId: string) => {
     if (!firestore || !hotelId) return;
     const shiftRef = doc(firestore, 'hotels', hotelId, 'shifts', shiftId);
-    deleteDocumentNonBlocking(shiftRef);
+    deleteDoc(shiftRef).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: shiftRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
   
   const addSlaRule = (ruleData: Omit<SlaRule, 'id'>) => {
     if (!slaRulesCollectionRef) return;
-    addDocumentNonBlocking(slaRulesCollectionRef, ruleData);
+    addDoc(slaRulesCollectionRef, ruleData).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: slaRulesCollectionRef.path,
+            operation: 'create',
+            requestResourceData: ruleData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
 
   const updateSlaRule = (ruleId: string, updates: Partial<SlaRule>) => {
     if (!firestore || !hotelId) return;
     const ruleRef = doc(firestore, 'hotels', hotelId, 'slaRules', ruleId);
-    updateDocumentNonBlocking(ruleRef, updates);
+    updateDoc(ruleRef, updates).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: ruleRef.path,
+            operation: 'update',
+            requestResourceData: updates,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
 
   const deleteSlaRule = (ruleId: string) => {
     if (!firestore || !hotelId) return;
     const ruleRef = doc(firestore, 'hotels', hotelId, 'slaRules', ruleId);
-    deleteDocumentNonBlocking(ruleRef);
+    deleteDoc(ruleRef).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: ruleRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
   
   return (
@@ -333,5 +400,4 @@ export function useTeam() {
   }
   return context;
 }
-
     
