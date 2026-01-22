@@ -7,41 +7,30 @@ service cloud.firestore {
     // START: SECURE & RE-DESIGNED HELPER FUNCTIONS
     // ======================================================================
     
-    // Checks if the requesting user's UID matches the document ID.
-    // This is the most direct way to check for ownership of a top-level doc like 'hotels'.
     function isOwner(docId) {
       return request.auth != null && request.auth.uid == docId;
     }
 
-    // Checks if the user is a team member by seeing if their UID exists in the subcollection.
-    // This function itself does not grant read access, it's just a check.
     function isTeamMember(hotelId) {
       return request.auth != null && exists(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid));
     }
     
-    // Checks if the user has the 'Admin' role in the team members subcollection.
-    // IMPORTANT: This uses `get()`, and should only be used in rules where the path
-    // being accessed is NOT the teamMembers path itself, to avoid recursion.
     function isTeamAdmin(hotelId) {
       return isTeamMember(hotelId) && get(/databases/$(database)/documents/hotels/$(hotelId)/teamMembers/$(request.auth.uid)).data.role == 'Admin';
     }
 
-    // Checks if the user is a Super Admin via custom claims.
     function isSuperAdmin() {
       return request.auth != null && request.auth.token.isSuperAdmin == true;
     }
 
-    // Checks if the user is a Franchise Owner via custom claims.
     function isFranchiseOwner() {
         return request.auth != null && request.auth.token.isFranchiseOwner == true;
     }
 
-    // Checks if a franchise owner has been granted access to a specific hotel.
     function hasDelegatedAccess(hotelId) {
         return isFranchiseOwner() && exists(/databases/$(database)/documents/hotels/$(hotelId)/delegates/$(request.auth.uid));
     }
     
-    // A guest is authenticated if their stayId exists in the public collection.
     function isGuestOfStay(stayId) {
         return stayId != null && exists(/databases/$(database)/documents/activeStays/$(stayId));
     }
@@ -52,64 +41,62 @@ service cloud.firestore {
 
     match /activeStays/{stayId} {
       allow get: if true;
-      // Writing to this public collection is restricted.
       allow write: if isOwner(getAfter(/databases/$(database)/documents/activeStays/$(stayId)).data.hotelId) 
                       || isTeamAdmin(getAfter(/databases/$(database)/documents/activeStays/$(stayId)).data.hotelId);
       allow list: if false; // Never allow listing all active stays.
     }
 
     // --- CORE HOTEL DOCUMENT RULE ---
-    // This is the most critical rule. We break the recursion here.
     match /hotels/{hotelId} {
-      // An owner can always read their own hotel document.
-      // A team member can also read it (e.g., for dashboard stats).
-      // No complex functions are called here, preventing loops.
       allow read: if isOwner(hotelId) || isTeamMember(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-
-      // Only the owner can create their hotel document initially.
       allow create: if isOwner(hotelId);
-      
-      // Only the owner or a team member with the 'Admin' role can update the hotel.
       allow update: if isOwner(hotelId) || isTeamAdmin(hotelId) || isSuperAdmin();
-
-      // Only franchise owners or super admins can list all hotels.
       allow list: if isFranchiseOwner() || isSuperAdmin();
     }
 
     // --- TEAM MEMBERS SUBCOLLECTION ---
-    // This rule is now non-recursive.
     match /hotels/{hotelId}/teamMembers/{memberId} {
-      // A member can read their own profile.
-      // Any team member of the hotel or the hotel owner can read any profile.
       allow get: if isOwner(memberId) || isOwner(hotelId) || isTeamMember(hotelId);
-      
-      // Listing team members is for owners, admins, and delegated owners.
       allow list: if isOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-
-      // Only owner or team admins can manage the team.
       allow create, update, delete: if isOwner(hotelId) || isTeamAdmin(hotelId);
     }
     
-    // ======================================================================
-    // GENERIC SUBCOLLECTION RULES (THE FIX IS HERE)
-    // ======================================================================
-
     // --- Publicly Readable Data (with restricted write) ---
     match /hotels/{hotelId}/{collection}/{docId} 
         where collection in ['roomCategories', 'hotelServices', 'restaurants', 'serviceCategories', 'serviceTimings', 'config', 'broadcasts'] {
         allow read: if true;
-        // Writes are restricted to owners or team admins.
         allow write: if isOwner(hotelId) || isTeamAdmin(hotelId);
     }
 
-    // --- STAFF-ONLY & DELEGATED ACCESS COLLECTIONS ---
-    // This is the key fix for checkoutHistory, billing, etc.
-    match /hotels/{hotelId}/{collection}/{docId}
-        where collection in ['checkoutHistory', 'departments', 'shifts', 'slaRules', 'corporateClients', 'inventory', 'vendors'] {
-        // Read access is granted if you are the OWNER of the hotel,
-        // OR a team admin, OR a delegated franchise owner. This breaks the loop.
-        allow list, read: if isOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
-        allow write: if isOwner(hotelId) || isTeamAdmin(hotelId);
+    // --- STAFF-ONLY & DELEGATED ACCESS COLLECTIONS (The fix is here) ---
+    // Explicitly matching each collection to avoid wildcard ambiguity.
+    match /hotels/{hotelId}/checkoutHistory/{docId} {
+      allow read, list: if isOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow write: if isOwner(hotelId) || isTeamAdmin(hotelId);
+    }
+    match /hotels/{hotelId}/corporateClients/{docId} {
+      allow read, list: if isOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow write: if isOwner(hotelId) || isTeamAdmin(hotelId);
+    }
+    match /hotels/{hotelId}/departments/{docId} {
+      allow read, list: if isOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow write: if isOwner(hotelId) || isTeamAdmin(hotelId);
+    }
+    match /hotels/{hotelId}/shifts/{docId} {
+      allow read, list: if isOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow write: if isOwner(hotelId) || isTeamAdmin(hotelId);
+    }
+    match /hotels/{hotelId}/slaRules/{docId} {
+      allow read, list: if isOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow write: if isOwner(hotelId) || isTeamAdmin(hotelId);
+    }
+    match /hotels/{hotelId}/inventory/{docId} {
+      allow read, list: if isOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow write: if isOwner(hotelId) || isTeamAdmin(hotelId);
+    }
+    match /hotels/{hotelId}/vendors/{docId} {
+      allow read, list: if isOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow write: if isOwner(hotelId) || isTeamAdmin(hotelId);
     }
     
     // --- Guest & Staff Shared Collections ---
@@ -117,7 +104,6 @@ service cloud.firestore {
         allow list: if isOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
         allow get: if isOwner(hotelId) || isTeamAdmin(hotelId) || isSuperAdmin() || isGuestOfStay(resource.data.stayId);
         allow create, delete: if isOwner(hotelId) || isTeamAdmin(hotelId);
-        // Any team member (e.g., cleaning crew) can update room status.
         allow update: if isTeamMember(hotelId);
     }
 
