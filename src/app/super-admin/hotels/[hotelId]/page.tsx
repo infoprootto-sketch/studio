@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useDoc, useCollection, useMemoFirebase, FirestorePermissionError, errorEmitter } from "@/firebase";
 import { useParams } from "next/navigation";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, updateDoc } from "firebase/firestore";
 import type { Hotel, TeamMember, Shift, Restaurant, Room, Department } from "@/lib/types";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { TeamManagementTable } from "@/components/dashboard/team-management-table";
@@ -51,7 +51,14 @@ function HotelDetailPageDataHandler() {
             if (hotel.receptionCount !== actualReceptionCount) updates.receptionCount = actualReceptionCount;
             
             if (Object.keys(updates).length > 0) {
-                updateDocumentNonBlocking(hotelDocRef, updates);
+                updateDoc(hotelDocRef, updates).catch(async (serverError) => {
+                    const permissionError = new FirestorePermissionError({
+                      path: hotelDocRef.path,
+                      operation: 'update',
+                      requestResourceData: updates,
+                    });
+                    errorEmitter.emit('permission-error', permissionError);
+                });
             }
         }
     }, [hotel, teamMembers, hotelDocRef]);
@@ -60,7 +67,15 @@ function HotelDetailPageDataHandler() {
         if (hotel && rooms && hotelDocRef) {
              const actualRoomCount = rooms.length;
              if (hotel.roomCount !== actualRoomCount) {
-                updateDocumentNonBlocking(hotelDocRef, { roomCount: actualRoomCount });
+                const updates = { roomCount: actualRoomCount };
+                updateDoc(hotelDocRef, updates).catch(async (serverError) => {
+                    const permissionError = new FirestorePermissionError({
+                      path: hotelDocRef.path,
+                      operation: 'update',
+                      requestResourceData: updates,
+                    });
+                    errorEmitter.emit('permission-error', permissionError);
+                });
              }
         }
     }, [hotel, rooms, hotelDocRef]);
