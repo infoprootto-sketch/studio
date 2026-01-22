@@ -39,7 +39,7 @@ export function AppSidebar() {
     { href: `/${hotelId}/dashboard/inventory`, icon: Package, label: 'Inventory' },
     { href: `/${hotelId}/dashboard/team`, icon: Users, label: 'Team' },
     { href: `/${hotelId}/dashboard/billing`, icon: CreditCard, label: 'Corporate Clients' },
-    { href: `/${hotelId}/dashboard/checkout-history`, icon: History, label: 'Checkout History' },
+    { href: `/${hotelId}/dashboard/checkout-history`, icon: History, label: 'Stay Archive' },
     { href: `/${hotelId}/dashboard/revenue-analytics`, icon: LineChart, label: 'Revenue Analytics' },
     { href: `/${hotelId}/dashboard/marketing`, icon: Megaphone, label: 'Marketing' },
   ];
