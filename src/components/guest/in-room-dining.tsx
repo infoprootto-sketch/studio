@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
@@ -184,7 +185,7 @@ export function InRoomDining({ restaurantId }: { restaurantId: string }) {
                                     const itemsForCategory = menuItemsByCategory[category] || [];
                                     if (itemsForCategory.length === 0) return null;
                                     return (
-                                        <div key={category} ref={el => categoryRefs.current[category] = el}>
+                                        <div key={category} ref={el => { categoryRefs.current[category] = el }}>
                                             <h2 className="font-bold text-xl mb-4">{category}</h2>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 {itemsForCategory.map((item) => {

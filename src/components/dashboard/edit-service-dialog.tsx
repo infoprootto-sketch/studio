@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { HotelService, Restaurant, ServiceCategory } from '@/lib/types';
+import type { HotelService, Restaurant, ServiceCategory, InventoryItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -98,7 +98,7 @@ export function EditServiceDialog({ service, isOpen, onClose, onSave, dialogType
     }
   }, [service, isOpen, dialogType, isEditing]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name || !category || price === '') {
       toast({
         variant: "destructive",
@@ -136,8 +136,6 @@ export function EditServiceDialog({ service, isOpen, onClose, onSave, dialogType
         serviceData.inventoryQuantityConsumed = Number(inventoryQuantity);
     }
 
-    onSave(serviceData);
-
     if (addToInventory && !isEditing) {
         const newInventoryItem: Omit<InventoryItem, 'id'> = {
             name: name,
@@ -146,13 +144,18 @@ export function EditServiceDialog({ service, isOpen, onClose, onSave, dialogType
             parLevel: 0,
             unit: 'pieces' // default unit
         };
-        addInventoryItem(newInventoryItem);
-        toast({
-            title: "Inventory Item Added",
-            description: `"${name}" has been added to inventory with a stock of 0.`,
-        });
+        const newId = await addInventoryItem(newInventoryItem);
+        if (newId) {
+            serviceData.inventoryItemId = newId;
+            serviceData.inventoryQuantityConsumed = Number(inventoryQuantity);
+            toast({
+                title: "Inventory Item Added",
+                description: `"${name}" has been added to inventory with a stock of 0.`,
+            });
+        }
     }
     
+    onSave(serviceData);
     onClose();
   };
 

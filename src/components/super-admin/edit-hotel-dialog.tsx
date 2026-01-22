@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -24,10 +25,10 @@ interface EditHotelDialogProps {
   onSave: (hotelId: string, updates: Partial<Hotel>) => void;
 }
 
-const plans = ['Boutique', 'Business', 'Enterprise'];
+const plans: Hotel['plan'][] = ['Boutique', 'Business', 'Enterprise'];
 
 export function EditHotelDialog({ hotel, isOpen, onClose, onSave }: EditHotelDialogProps) {
-  const [plan, setPlan] = useState('');
+  const [plan, setPlan] = useState<Hotel['plan']>('Boutique');
   const [roomLimit, setRoomLimit] = useState<number | ''>('');
   const { toast } = useToast();
 
@@ -66,7 +67,7 @@ export function EditHotelDialog({ hotel, isOpen, onClose, onSave }: EditHotelDia
         <div className="py-4 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="plan">Subscription Plan</Label>
-            <Select value={plan} onValueChange={setPlan}>
+            <Select value={plan} onValueChange={(value) => setPlan(value as Hotel['plan'])}>
               <SelectTrigger id="plan">
                 <SelectValue placeholder="Select a plan" />
               </SelectTrigger>

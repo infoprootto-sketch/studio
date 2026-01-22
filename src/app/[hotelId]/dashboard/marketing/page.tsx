@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -9,11 +10,11 @@ import type { Broadcast } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { BroadcastList } from '@/components/dashboard/broadcast-list';
 import { EditBroadcastDialog } from '@/components/dashboard/edit-broadcast-dialog';
-import { useRooms } from '@/context/room-context';
+import { useRoomState } from '@/context/room-context';
 
 export default function MarketingPage() {
     const { broadcasts, addBroadcast, updateBroadcast, deleteBroadcast } = useServices();
-    const { roomCategories } = useRooms();
+    const { roomCategories } = useRoomState();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedBroadcast, setSelectedBroadcast] = useState<Broadcast | null>(null);
     const { toast } = useToast();

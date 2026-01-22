@@ -119,7 +119,7 @@ export function EditTeamMemberDialog({ member, departments, shifts, restaurants,
             </div>
             <div className="space-y-2">
                 <Label htmlFor="member-email">Email Address</Label>
-                <Input id="member-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g., john.d@example.com" disabled={isEditing} />
+                <Input id="member-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g., john.d@example.com" disabled={!!isEditing} />
             </div>
           </div>
           

@@ -33,11 +33,8 @@ type CartItem = {
 
 
 export function LiveActivityGrid({ role = 'admin' }: { role?: 'admin' | 'manager' }) {
-  const { rooms } = useRoomState();
-  const {
-    archiveStay,
-    isManageRoomOpen, closeManageRoom, openManageRoom, selectedRoom: managedRoom, selectedStayId, selectedDate, dialogAction
-   } = useRoomActions();
+  const { rooms, isManageRoomOpen, selectedRoom: managedRoom, selectedStayId, selectedDate, dialogAction } = useRoomState();
+  const { archiveStay, openManageRoom, closeManageRoom } = useRoomActions();
    const { hotelServices, serviceRequests, addServiceRequests, restaurants } = useServices();
    const { corporateClients, addBilledOrder } = useBilling();
    const { teamMembers, departments, slaRules } = useTeam();

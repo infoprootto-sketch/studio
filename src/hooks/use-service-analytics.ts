@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { isWithinInterval, startOfDay, endOfDay, format } from 'date-fns';
+import { isWithinInterval, startOfDay, endOfDay, format, startOfMonth, endOfMonth } from 'date-fns';
 import type { ServiceRequest, CheckedOutStay, Restaurant } from '@/lib/types';
 import type { DateRange } from 'react-day-picker';
 
@@ -12,8 +12,19 @@ export function useServiceAnalytics(
     dateRange: DateRange | undefined,
     restaurants: Restaurant[]
 ) {
+    const filterLabel = useMemo(() => {
+      if (!dateRange?.from) return "Select a date range";
+      if (dateRange.to) {
+        if (format(dateRange.from, 'yyyy-MM-dd') === format(startOfMonth(dateRange.from), 'yyyy-MM-dd') && format(dateRange.to, 'yyyy-MM-dd') === format(endOfMonth(dateRange.from), 'yyyy-MM-dd')) {
+            return format(dateRange.from, 'MMMM yyyy');
+        }
+        return `${format(dateRange.from, 'LLL dd, yyyy')} - ${format(dateRange.to, 'LLL dd, yyyy')}`;
+      }
+      return format(dateRange.from, 'LLL dd, yyyy');
+    }, [dateRange]);
+
     const serviceAnalyticsData = useMemo(() => {
-        if (!dateRange?.from) return { totalServiceRevenue: 0, mostRequestedService: null, topRevenueService: null, serviceAnalytics: [], categoryAnalytics: [] };
+        if (!dateRange?.from) return { totalServiceRevenue: 0, mostRequestedService: null, topRevenueService: null, serviceAnalytics: [], categoryAnalytics: [], filterLabel };
 
         const interval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to || dateRange.from) };
         
@@ -64,8 +75,8 @@ export function useServiceAnalytics(
         const topRevenueService = userFacingServices[0] || null;
         const totalServiceRevenue = serviceAnalytics.reduce((sum, service) => sum + service.revenue, 0);
 
-        return { totalServiceRevenue, mostRequestedService, topRevenueService, serviceAnalytics, categoryAnalytics };
-    }, [serviceRequests, checkoutHistory, dateRange, restaurants]);
+        return { totalServiceRevenue, mostRequestedService, topRevenueService, serviceAnalytics, categoryAnalytics, filterLabel };
+    }, [serviceRequests, checkoutHistory, dateRange, restaurants, filterLabel]);
 
     return { serviceAnalyticsData };
 }

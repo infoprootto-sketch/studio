@@ -2,16 +2,28 @@
 'use client';
 
 import { useMemo } from 'react';
-import { format, startOfDay, eachDayOfInterval, isWithinInterval, subDays } from 'date-fns';
+import { format, startOfDay, eachDayOfInterval, isWithinInterval, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import type { Room } from '@/lib/types';
 import type { DateRange } from 'react-day-picker';
 
 export function useOccupancyAnalytics(rooms: Room[], dateRange: DateRange | undefined) {
+    
+    const filterLabel = useMemo(() => {
+      if (!dateRange?.from) return "Select a date range";
+      if (dateRange.to) {
+        if (format(dateRange.from, 'yyyy-MM-dd') === format(startOfMonth(dateRange.from), 'yyyy-MM-dd') && format(dateRange.to, 'yyyy-MM-dd') === format(endOfMonth(dateRange.from), 'yyyy-MM-dd')) {
+            return format(dateRange.from, 'MMMM yyyy');
+        }
+        return `${format(dateRange.from, 'LLL dd, yyyy')} - ${format(dateRange.to, 'LLL dd, yyyy')}`;
+      }
+      return format(dateRange.from, 'LLL dd, yyyy');
+    }, [dateRange]);
+    
     const occupancyAnalyticsData = useMemo(() => {
-        if (!dateRange?.from || !rooms) return { chartData: [] };
+        if (!dateRange?.from || !rooms) return { chartData: [], filterLabel };
         
         const interval = { start: startOfDay(dateRange.from), end: startOfDay(dateRange.to || dateRange.from) };
-        if (!interval.start || !interval.end) return { chartData: [] };
+        if (!interval.start || !interval.end) return { chartData: [], filterLabel };
         
         const daysInInterval = eachDayOfInterval(interval);
 
@@ -38,8 +50,8 @@ export function useOccupancyAnalytics(rooms: Room[], dateRange: DateRange | unde
             return { date: format(day, 'yyyy-MM-dd'), occupancy: occupancyPercentage };
         });
 
-        return { chartData };
-    }, [dateRange, rooms]);
+        return { chartData, filterLabel };
+    }, [dateRange, rooms, filterLabel]);
 
     return { occupancyAnalyticsData };
 }

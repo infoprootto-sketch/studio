@@ -8,10 +8,11 @@ import { useHotelId } from './hotel-id-context';
 import { collection, doc, addDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 
 interface BillingContextType {
+  corporateClients: CorporateClient[];
   addClient: (clientData: Omit<CorporateClient, 'id' | 'billedOrders'>) => void;
   updateClient: (clientId: string, updates: Partial<CorporateClient>) => void;
   deleteClient: (clientId: string) => void;
-  addBilledOrder: (clientId: string, order: Omit<BilledOrder, 'id'>, allClients: CorporateClient[]) => void;
+  addBilledOrder: (clientId: string, order: Omit<BilledOrder, 'id'>) => void;
   updateBilledOrder: (clientId: string, orderId: string, updates: Partial<BilledOrder>, allClients: CorporateClient[]) => void;
 }
 
@@ -25,6 +26,19 @@ export function BillingProvider({ children }: { children: ReactNode }) {
     () => (firestore && hotelId ? collection(firestore, 'hotels', hotelId, 'corporateClients') : null),
     [firestore, hotelId]
   );
+  const { data: rawCorporateClients = [] } = useCollection<CorporateClient>(clientsCollectionRef);
+
+    const corporateClients = useMemo(() => {
+        if (!rawCorporateClients) return [];
+        return rawCorporateClients.map(client => ({
+        ...client,
+        billedOrders: (client.billedOrders || []).map(order => ({
+            ...order,
+            date: (order.date as any)?.toDate ? (order.date as any).toDate() : new Date(order.date),
+            paidDate: order.paidDate && ((order.paidDate as any)?.toDate ? (order.paidDate as any).toDate() : new Date(order.paidDate)),
+        })),
+        }));
+    }, [rawCorporateClients]);
   
   const addClient = (clientData: Omit<CorporateClient, 'id' | 'billedOrders'>) => {
     if (!clientsCollectionRef) return;
@@ -115,6 +129,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
   };
   
   const value = {
+      corporateClients,
       addClient,
       updateClient,
       deleteClient,

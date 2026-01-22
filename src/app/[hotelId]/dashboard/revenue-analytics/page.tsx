@@ -13,7 +13,7 @@ import { CombinedAnalyticsReport } from '@/components/dashboard/combined-analyti
 import type { DateRange } from 'react-day-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
+import { cn, isToday } from '@/lib/utils';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { useHotelId } from '@/context/hotel-id-context';
 import { collection } from 'firebase/firestore';
@@ -53,7 +53,7 @@ export default function RevenueAnalyticsPage() {
 
     const [date, setDate] = useState<DateRange | undefined>(undefined);
 
-    const { revenueAnalyticsData, filterLabel } = useRevenueAnalytics(checkoutHistory, date);
+    const { revenueAnalyticsData } = useRevenueAnalytics(checkoutHistory, date);
     const { serviceAnalyticsData } = useServiceAnalytics(serviceRequests, checkoutHistory, date, restaurants);
     const { occupancyAnalyticsData } = useOccupancyAnalytics(rooms, date);
 
@@ -126,7 +126,7 @@ export default function RevenueAnalyticsPage() {
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight font-headline">Revenue &amp; Service Analytics</h1>
                     <p className="text-muted-foreground">
-                        Comprehensive performance overview for: <span className="font-semibold text-primary">{filterLabel}</span>
+                        Comprehensive performance overview for: <span className="font-semibold text-primary">{revenueAnalyticsData.filterLabel}</span>
                     </p>
                 </div>
                  <div className="flex items-center gap-2 pt-2 md:pt-0">
@@ -138,7 +138,7 @@ export default function RevenueAnalyticsPage() {
                                 className={cn("w-full sm:w-[280px] justify-start text-left font-normal", !date && "text-muted-foreground")}
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {filterLabel}
+                                {revenueAnalyticsData.filterLabel}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="end">

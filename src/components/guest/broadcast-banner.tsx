@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -8,7 +9,7 @@ import { X, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/components/ui/carousel';
-import Autoplay from "embla-carousel-autoplay";
+import Autoplay from "embla-carousel-autoplay"
 import type { Broadcast } from '@/lib/types';
 
 

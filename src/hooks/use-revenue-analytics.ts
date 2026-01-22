@@ -73,5 +73,5 @@ export function useRevenueAnalytics(checkoutHistory: CheckedOutStay[], dateRange
         return { totalRevenue, roomRevenue, serviceRevenue, adr, chartData, filterLabel };
     }, [checkoutHistory, dateRange, filterLabel, revenueFromPaidCorporateBills, corporateClients]);
 
-    return { revenueAnalyticsData, filterLabel };
+    return { revenueAnalyticsData };
 }

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -16,9 +17,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useServices } from '@/context/service-context';
 import { useTeam } from '@/context/team-context';
 import { useUser, useFirestore } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { useHotelId } from '@/context/hotel-id-context';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ServiceQueueReport } from './service-queue-report';
 import { useSettings } from '@/context/settings-context';
@@ -152,7 +152,7 @@ export function ServiceQueue({ role = 'admin' }: { role?: 'admin' | 'reception' 
             update.completionTime = new Date();
         }
 
-        updateDoc(requestRef, update);
+        updateDoc(requestRef, update as any);
 
         // If a cleaning task is completed, mark the room as available and deduct inventory.
         if (request.service === 'Post-Checkout Cleaning' && newStatus === 'Completed') {

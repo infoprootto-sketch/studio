@@ -295,11 +295,12 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
       timings.forEach(timing => {
         if(timing.id) {
           const timingRef = doc(timingsCollectionRef, timing.id);
-          updateDoc(timingRef, timing).catch(async (serverError) => {
+          const { id, ...dataToUpdate } = timing;
+          updateDoc(timingRef, dataToUpdate).catch(async (serverError) => {
             const permissionError = new FirestorePermissionError({
               path: timingRef.path,
               operation: 'update',
-              requestResourceData: timing,
+              requestResourceData: dataToUpdate,
             });
             errorEmitter.emit('permission-error', permissionError);
           });

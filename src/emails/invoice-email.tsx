@@ -1,3 +1,4 @@
+
 import {
   Body,
   Container,
@@ -16,35 +17,37 @@ import { BilledOrder } from '@/lib/types';
 import { Currency } from '@/lib/countries-currencies';
 
 interface InvoiceEmailProps {
-  clientName: string;
+  clientName?: string;
   orders: BilledOrder[];
-  hotelDetails: {
-    legalName: string;
-    address: string;
+  hotelDetails?: {
+    legalName?: string;
+    address?: string;
   };
-  currency: Currency;
+  currency?: Currency;
 }
 
-const formatPrice = (price: number, currency: Currency) => {
+const formatPrice = (price: number, currency?: Currency) => {
+    const safeCurrency = currency || { code: 'USD', symbol: '$' };
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: currency.code,
+        currency: safeCurrency.code,
     }).format(price);
 };
 
 export const InvoiceEmail = ({ clientName, orders, hotelDetails, currency }: InvoiceEmailProps) => {
     const totalAmount = orders.reduce((sum, order) => sum + order.amount, 0);
+    const hotelName = hotelDetails?.legalName || 'Your Hotel';
 
     return (
         <Html>
         <Head />
-        <Preview>Your Invoice from {hotelDetails.legalName}</Preview>
+        <Preview>Your Invoice from {hotelName}</Preview>
         <Body style={main}>
             <Container style={container}>
             <Heading style={heading}>Invoice Summary</Heading>
-            <Text style={paragraph}>Dear {clientName},</Text>
+            <Text style={paragraph}>Dear {clientName || 'Valued Client'},</Text>
             <Text style={paragraph}>
-                Please find attached the invoice summary for your recent stays with {hotelDetails.legalName}.
+                Please find attached the invoice summary for your recent stays with {hotelName}.
             </Text>
             
             <Section style={table}>
@@ -77,7 +80,7 @@ export const InvoiceEmail = ({ clientName, orders, hotelDetails, currency }: Inv
                 Thank you for your business. We look forward to welcoming you and your guests back soon.
             </Text>
             <Text style={footer}>
-                {hotelDetails.legalName} | {hotelDetails.address}
+                {hotelName} | {hotelDetails?.address || ''}
             </Text>
             </Container>
         </Body>

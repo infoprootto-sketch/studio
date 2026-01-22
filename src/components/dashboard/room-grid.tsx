@@ -103,17 +103,14 @@ function RoomCard({ room, onStatusChange, onSetOutOfOrder }: { room: Room, onSta
 }
 
 export function RoomGrid({ initialRooms }: { initialRooms: Room[]}) {
-  const { rooms: contextRooms, roomCategories } = useRoomState();
-  const { 
-    updateRoom,
-    isManageRoomOpen, closeManageRoom, selectedRoom: managedRoom, selectedStayId, selectedDate, dialogAction
-  } = useRoomActions();
+  const { rooms: contextRooms, roomCategories, isManageRoomOpen, selectedRoom: managedRoom, selectedStayId, selectedDate, dialogAction } = useRoomState();
+  const { updateRoom, closeManageRoom } = useRoomActions();
   
   const rooms = initialRooms && initialRooms.length > 0 ? initialRooms : contextRooms;
 
   const { inventory, updateInventoryItem, addStockMovement } = useInventory();
   const [currentPage, setCurrentPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState<RoomStatus>('Available');
+  const [statusFilter, setStatusFilter] = useState<RoomStatus | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isOutOfOrderDialogOpen, setIsOutOfOrderDialogOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
@@ -121,7 +118,7 @@ export function RoomGrid({ initialRooms }: { initialRooms: Room[]}) {
 
   const roomsPerPage = 18;
   
-  const handleFilterChange = (status: RoomStatus) => {
+  const handleFilterChange = (status: RoomStatus | 'All') => {
     setStatusFilter(status);
     setCurrentPage(1);
   }

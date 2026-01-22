@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -24,7 +25,7 @@ export function AttendanceViewer({ teamMembers, shifts }: AttendanceViewerProps)
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<TeamDepartment | 'All'>('All');
-  const [statusFilter, setStatusFilter] = useState<AttendanceStatus>('Clocked In');
+  const [statusFilter, setStatusFilter] = useState<AttendanceStatus | 'All'>('All');
 
   const { departments } = useTeam();
 

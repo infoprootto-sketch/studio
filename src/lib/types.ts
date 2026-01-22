@@ -1,6 +1,6 @@
 
 
-import { doc } from "firebase/firestore";
+import { FieldValue } from "firebase/firestore";
 
 export type RoomStatus = 'Available' | 'Occupied' | 'Cleaning' | 'Out of Order' | 'Waiting for Check-in' | 'Reserved';
 
@@ -15,11 +15,11 @@ export interface Hotel {
   plan: 'Boutique' | 'Business' | 'Enterprise';
   roomLimit: number;
   ownerUids: string[];
-  teamSize?: number;
-  adminCount?: number;
-  managerCount?: number;
-  receptionCount?: number;
-  roomCount?: number;
+  teamSize?: number | FieldValue;
+  adminCount?: number | FieldValue;
+  managerCount?: number | FieldValue;
+  receptionCount?: number | FieldValue;
+  roomCount?: number | FieldValue;
 }
 
 export interface AccessRequest {
