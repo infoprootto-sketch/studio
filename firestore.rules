@@ -71,11 +71,11 @@ service cloud.firestore {
     // --- STAFF-ONLY & DELEGATED ACCESS COLLECTIONS (The fix is here) ---
     // Explicitly matching each collection to avoid wildcard ambiguity.
     match /hotels/{hotelId}/checkoutHistory/{docId} {
-      allow read, list: if isOwner(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow read, list: if isOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow write: if isOwner(hotelId) || isTeamAdmin(hotelId);
     }
     match /hotels/{hotelId}/corporateClients/{docId} {
-      allow read, list: if isOwner(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
+      allow read, list: if isOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow write: if isOwner(hotelId) || isTeamAdmin(hotelId);
     }
     match /hotels/{hotelId}/departments/{docId} {
@@ -86,7 +86,7 @@ service cloud.firestore {
       allow read, list: if isOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow write: if isOwner(hotelId) || isTeamAdmin(hotelId);
     }
-    match /hotels/{hotelId}/slaRules/{docId} {
+    match /hotels/{hotelId}/slaRules/{ruleId} {
       allow read, list: if isOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow write: if isOwner(hotelId) || isTeamAdmin(hotelId);
     }
@@ -94,7 +94,7 @@ service cloud.firestore {
       allow read, list: if isOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow write: if isOwner(hotelId) || isTeamAdmin(hotelId);
     }
-    match /hotels/{hotelId}/vendors/{docId} {
+    match /hotels/{hotelId}/vendors/{vendorId} {
       allow read, list: if isOwner(hotelId) || isTeamAdmin(hotelId) || hasDelegatedAccess(hotelId) || isSuperAdmin();
       allow write: if isOwner(hotelId) || isTeamAdmin(hotelId);
     }
