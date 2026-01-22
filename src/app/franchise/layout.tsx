@@ -68,3 +68,4 @@ export default function FranchiseLayout({
     </HotelIdProvider>
   );
 }
+
