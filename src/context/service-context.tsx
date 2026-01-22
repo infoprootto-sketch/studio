@@ -1,11 +1,11 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
 import type { HotelService, ServiceRequest, Restaurant, ServiceTiming, ServiceCategory, StockMovement, InventoryItem, Broadcast, Department } from '@/lib/types';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { useHotelId } from './hotel-id-context';
-import { collection, doc, writeBatch } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc, writeBatch, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { usePathname } from 'next/navigation';
 
 interface ServiceContextType {
@@ -94,33 +94,66 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
 
   const addBroadcast = (broadcastData: Omit<Broadcast, 'id'>) => {
     if (!broadcastsCollectionRef) return;
-    addDocumentNonBlocking(broadcastsCollectionRef, broadcastData);
+    addDoc(broadcastsCollectionRef, broadcastData).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: broadcastsCollectionRef.path,
+          operation: 'create',
+          requestResourceData: broadcastData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
   
   const updateBroadcast = (broadcastId: string, updates: Partial<Broadcast>) => {
     if (!firestore || !hotelId) return;
     const broadcastRef = doc(firestore, 'hotels', hotelId, 'broadcasts', broadcastId);
-    updateDocumentNonBlocking(broadcastRef, updates);
+    updateDoc(broadcastRef, updates).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: broadcastRef.path,
+          operation: 'update',
+          requestResourceData: updates,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
   
   const deleteBroadcast = (broadcastId: string) => {
     if (!firestore || !hotelId) return;
     const broadcastRef = doc(firestore, 'hotels', hotelId, 'broadcasts', broadcastId);
-    deleteDocumentNonBlocking(broadcastRef);
+    deleteDoc(broadcastRef).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: broadcastRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   const addServiceCategory = (category: Omit<ServiceCategory, 'id'>) => {
     if (!categoriesCollectionRef) return;
     const existing = serviceCategories.find(c => c.name === category.name);
     if (!existing) {
-        addDocumentNonBlocking(categoriesCollectionRef, category);
+        addDoc(categoriesCollectionRef, category).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+              path: categoriesCollectionRef.path,
+              operation: 'create',
+              requestResourceData: category,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+          });
     }
   };
 
   const deleteServiceCategory = (categoryId: string) => {
     if (!categoriesCollectionRef || !firestore || !hotelId) return;
     const docRef = doc(firestore, 'hotels', hotelId, 'serviceCategories', categoryId);
-    deleteDocumentNonBlocking(docRef);
+    deleteDoc(docRef).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   }
 
   const deleteServicesByCategory = async (categoryName: string) => {
@@ -131,7 +164,13 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
         const serviceRef = doc(firestore, 'hotels', hotelId, 'hotelServices', service.id);
         batch.delete(serviceRef);
     });
-    await batch.commit();
+    await batch.commit().catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: 'batch operation',
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   const reassignServicesToCategory = async (oldCategory: string, newCategory: string) => {
@@ -147,18 +186,31 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
         const serviceRef = doc(firestore, 'hotels', hotelId, 'hotelServices', service.id);
         batch.update(serviceRef, { category: newCategory });
     });
-    await batch.commit();
+    await batch.commit().catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: 'batch operation',
+          operation: 'update',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   const addServiceRequests = async (requests: Omit<ServiceRequest, 'id'>[]): Promise<string[]> => {
-    const serviceRequestsCollection = collection(firestore!, `hotels/${hotelId}/serviceRequests`);
-    if (!serviceRequestsCollection) return [];
+    if (!firestore || !hotelId) return [];
+    const serviceRequestsCollection = collection(firestore, `hotels/${hotelId}/serviceRequests`);
     
     const addedIds: string[] = [];
     for (const req of requests) {
-      const docRef = await addDocumentNonBlocking(serviceRequestsCollection, req);
-      if (docRef) {
+      try {
+        const docRef = await addDoc(serviceRequestsCollection, req);
         addedIds.push(docRef.id);
+      } catch(serverError) {
+        const permissionError = new FirestorePermissionError({
+            path: serviceRequestsCollection.path,
+            operation: 'create',
+            requestResourceData: req,
+          });
+        errorEmitter.emit('permission-error', permissionError);
       }
     }
     return addedIds;
@@ -166,36 +218,76 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
 
   const addHotelService = (serviceData: Omit<HotelService, 'id'>) => {
     if (!servicesCollectionRef) return;
-    addDocumentNonBlocking(servicesCollectionRef, serviceData);
+    addDoc(servicesCollectionRef, serviceData).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: servicesCollectionRef.path,
+          operation: 'create',
+          requestResourceData: serviceData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
   
   const updateHotelService = (serviceId: string, updates: Partial<HotelService>) => {
     if (!firestore || !hotelId) return;
     const serviceRef = doc(firestore, 'hotels', hotelId, 'hotelServices', serviceId);
-    updateDocumentNonBlocking(serviceRef, updates);
+    updateDoc(serviceRef, updates).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: serviceRef.path,
+          operation: 'update',
+          requestResourceData: updates,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   const deleteHotelService = (serviceId: string) => {
     if (!firestore || !hotelId) return;
     const serviceRef = doc(firestore, 'hotels', hotelId, 'hotelServices', serviceId);
-    deleteDocumentNonBlocking(serviceRef);
+    deleteDoc(serviceRef).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: serviceRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
   
   const addRestaurant = (restaurantData: Omit<Restaurant, 'id'>) => {
     if (!restaurantsCollectionRef) return;
-    addDocumentNonBlocking(restaurantsCollectionRef, restaurantData);
+    addDoc(restaurantsCollectionRef, restaurantData).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: restaurantsCollectionRef.path,
+          operation: 'create',
+          requestResourceData: restaurantData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
   
   const updateRestaurant = (restaurantId: string, updates: Partial<Restaurant>) => {
     if (!firestore || !hotelId) return;
     const restaurantRef = doc(firestore, 'hotels', hotelId, 'restaurants', restaurantId);
-    updateDocumentNonBlocking(restaurantRef, updates);
+    updateDoc(restaurantRef, updates).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: restaurantRef.path,
+          operation: 'update',
+          requestResourceData: updates,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   const deleteRestaurant = (restaurantId: string) => {
     if (!firestore || !hotelId) return;
     const restaurantRef = doc(firestore, 'hotels', hotelId, 'restaurants', restaurantId);
-    deleteDocumentNonBlocking(restaurantRef);
+    deleteDoc(restaurantRef).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: restaurantRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
   
   const setServiceTimings = (timings: ServiceTiming[]) => {
@@ -203,20 +295,40 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
       timings.forEach(timing => {
         if(timing.id) {
           const timingRef = doc(timingsCollectionRef, timing.id);
-          updateDocumentNonBlocking(timingRef, timing);
+          updateDoc(timingRef, timing).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+              path: timingRef.path,
+              operation: 'update',
+              requestResourceData: timing,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+          });
         }
       })
   }
 
   const addServiceTiming = (timing: Omit<ServiceTiming, 'id'>) => {
     if (!timingsCollectionRef) return;
-    addDocumentNonBlocking(timingsCollectionRef, timing);
+    addDoc(timingsCollectionRef, timing).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: timingsCollectionRef.path,
+          operation: 'create',
+          requestResourceData: timing,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   }
   
   const deleteServiceTiming = (timingId: string) => {
     if(!timingsCollectionRef || !firestore || !hotelId) return;
     const timingRef = doc(firestore, 'hotels', hotelId, 'serviceTimings', timingId);
-    deleteDocumentNonBlocking(timingRef);
+    deleteDoc(timingRef).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: timingRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   }
 
   const reassignAndRemoveCategory = async (restaurantId: string, oldCategory: string, newCategory: string) => {
@@ -245,7 +357,13 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
       batch.update(restaurantRef, { categories: updatedCategories });
     }
     
-    await batch.commit();
+    await batch.commit().catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'batch operation',
+            operation: 'write',
+          });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
 
   const editRestaurantCategory = async (restaurantId: string, oldCategory: string, newCategory: string) => {
@@ -271,7 +389,13 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
       batch.update(restaurantRef, { categories: updatedCategories });
     }
     
-    await batch.commit();
+    await batch.commit().catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'batch operation',
+            operation: 'write',
+          });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
 
 
