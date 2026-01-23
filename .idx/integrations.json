@@ -2,5 +2,6 @@
   "firebase_hosting": {
     "deploymentHostingUrl": "https://staycentralv2-67504826-2d582.web.app"
   },
-  "cloud_run_deploy": {}
+  "cloud_run_deploy": {},
+  "gemini_api": {}
 }
