@@ -13,12 +13,13 @@ export function initializeFirebase(): {
   const firebaseApp =
     getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-  let firestore: Firestore | null;
+  let firestore: Firestore | null = null;
   try {
     firestore = getFirestore(firebaseApp);
-  } catch (e) {
-    console.error('Failed to initialize Firestore:', e);
-    firestore = null;
+  } catch (error) {
+    console.error("Failed to initialize Firestore. This is expected if the service is not enabled yet.", error);
+    // Firestore is not available, but the app can continue running without crashing.
+    // The UI is designed to show a "Database Not Connected" message in this case.
   }
 
   return {
