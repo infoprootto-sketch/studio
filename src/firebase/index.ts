@@ -1,32 +1,52 @@
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore'
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
-export function initializeFirebase(): {
-  firebaseApp: FirebaseApp;
-  auth: Auth;
-  firestore: Firestore | null;
-} {
-  const firebaseApp =
-    getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-
-  let firestore: Firestore | null = null;
-  try {
-    firestore = getFirestore(firebaseApp);
-  } catch (error) {
-    console.error("Failed to initialize Firestore. This is expected if the service is not enabled yet.", error);
-    // Firestore is not available, but the app can continue running without crashing.
-    // The UI is designed to show a "Database Not Connected" message in this case.
+export function initializeFirebase() {
+  if (getApps().length === 0) {
+    // During server-side rendering, we need to initialize with the config directly.
+    // Firebase Hosting provides config via environment variables, but that's for client-side automatic init.
+    if (typeof window === "undefined") {
+      const firebaseApp = initializeApp(firebaseConfig);
+      return getSdks(firebaseApp);
+    }
+    
+    // On the client, we can try the automatic initialization.
+    let firebaseApp;
+    try {
+      firebaseApp = initializeApp();
+    } catch (e) {
+      if (process.env.NODE_ENV === "production") {
+        console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
+      }
+      firebaseApp = initializeApp(firebaseConfig);
+    }
+    return getSdks(firebaseApp);
   }
 
-  return {
-    firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore,
-  };
+  // If already initialized, return the SDKs with the already initialized App
+  return getSdks(getApp());
+}
+
+export function getSdks(firebaseApp: FirebaseApp) {
+  try {
+    return {
+      firebaseApp,
+      auth: getAuth(firebaseApp),
+      firestore: getFirestore(firebaseApp)
+    };
+  } catch (error) {
+    console.error("Could not initialize Firestore.", error);
+    // Return other services even if firestore fails
+    return {
+      firebaseApp,
+      auth: getAuth(firebaseApp),
+      firestore: null
+    };
+  }
 }
 
 export * from './provider';
