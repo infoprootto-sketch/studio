@@ -1,9 +1,9 @@
 'use client';
-
 import React from 'react';
 
-export function RevenueChart({ data }: { data: any[] }) {
-    return <div className="flex items-center justify-center h-full text-muted-foreground">Charting library removed for stability.</div>
+// This component has been temporarily simplified to improve stability.
+export function RevenueChart() {
+    return null;
 }
 
 export type ChartDataPoint = {
